@@ -2,22 +2,25 @@ import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { Icon } from '@/components/ui/Icon';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
+import { LocaleToggle } from '@/components/ui/LocaleToggle';
 import { cn } from '@/lib/cn';
 import { GlobalSearch } from '@/features/dashboard/GlobalSearch';
 import { useStreak } from '@/features/stats/useStreak';
 import { seedIfEmpty } from '@/lib/seed';
-
-const nav = [
-  { to: '/', label: 'Dashboard', icon: Icon.Home, end: true },
-  { to: '/stories', label: 'Stories', icon: Icon.Book, end: false },
-  { to: '/stats', label: 'Statistics', icon: Icon.Chart, end: false },
-  { to: '/settings', label: 'Settings', icon: Icon.Settings, end: false },
-];
+import { useT } from '@/hooks/useT';
 
 export function AppLayout() {
   const navigate = useNavigate();
   const [searchOpen, setSearchOpen] = useState(false);
   const streak = useStreak();
+  const t = useT();
+
+  const nav = [
+    { to: '/', label: t('nav.dashboard'), icon: Icon.Home, end: true },
+    { to: '/stories', label: t('nav.stories'), icon: Icon.Book, end: false },
+    { to: '/stats', label: t('nav.statistics'), icon: Icon.Chart, end: false },
+    { to: '/settings', label: t('nav.settings'), icon: Icon.Settings, end: false },
+  ];
 
   // Seed demo content on first ever run.
   useEffect(() => {
@@ -80,6 +83,7 @@ export function AppLayout() {
               <Icon.Search size={14} />
               <span className="kbd">⌘K</span>
             </button>
+            <LocaleToggle />
             <ThemeToggle />
           </div>
         </div>

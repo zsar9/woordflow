@@ -14,6 +14,7 @@ import { downloadBackup, restoreBackup } from '@/lib/export';
 import { useToast } from '@/components/ui/Toast';
 import { languageAccent } from '@/lib/languageColor';
 import { pluralize } from '@/lib/format';
+import { useT } from '@/hooks/useT';
 
 export function DashboardPage() {
   const { folders, lists, summaries, loading } = useLibrary();
@@ -21,6 +22,7 @@ export function DashboardPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const restoreRef = useRef<HTMLInputElement>(null);
+  const t = useT();
 
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
   const [showNewList, setShowNewList] = useState(false);
@@ -65,9 +67,9 @@ export function DashboardPage() {
   return (
     <div>
       <p className="mb-1 text-sm text-muted">
-        {streak.studiedToday ? "You've studied today — nice." : 'Pick a list and keep your streak alive.'}
+        {streak.studiedToday ? t('dashboard.subtitle.studied') : t('dashboard.subtitle.pick')}
       </p>
-      <h1 className="mb-6 text-3xl text-ink">Dashboard</h1>
+      <h1 className="mb-6 text-3xl text-ink">{t('dashboard.title')}</h1>
 
       {/* Due banner */}
       <div className="mb-8 flex flex-col gap-4 rounded-3xl border border-border bg-gradient-to-br from-brand-soft/60 to-transparent p-6 sm:flex-row sm:items-center sm:justify-between">
@@ -76,7 +78,7 @@ export function DashboardPage() {
             {today} · {streak.current} day streak
           </Eyebrow>
           <h2 className="mt-1 font-serif text-4xl text-ink">
-            {totalDue > 0 ? `${totalDue} words are due.` : 'Nothing due — study ahead?'}
+            {totalDue > 0 ? `${totalDue} ${t('dashboard.due.some')}` : t('dashboard.due.none')}
           </h2>
           {dueByLanguage.length > 0 && (
             <div className="mt-3 flex flex-wrap items-center gap-3">
@@ -98,7 +100,7 @@ export function DashboardPage() {
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <Button variant="secondary" onClick={() => setShowFolders((v) => !v)}>
-            Pick a list
+            {t('dashboard.pickList')}
           </Button>
           <Button
             variant="primary"
@@ -108,7 +110,7 @@ export function DashboardPage() {
               if (withDue) navigate(`/study/${withDue.id}`);
             }}
           >
-            Study all due
+            {t('dashboard.studyAllDue')}
           </Button>
         </div>
       </div>
@@ -134,15 +136,15 @@ export function DashboardPage() {
       ) : visibleLists.length === 0 ? (
         <EmptyState
           icon={<Icon.Book size={32} />}
-          title="No lists here yet"
-          description="Create a list or import words from CSV, Excel, or a paste."
+          title={t('dashboard.empty.title')}
+          description={t('dashboard.empty.desc')}
           action={
             <div className="flex gap-2">
               <Button variant="primary" onClick={() => setShowNewList(true)}>
-                <Icon.Plus size={15} /> New list
+                <Icon.Plus size={15} /> {t('dashboard.newList')}
               </Button>
               <Button variant="secondary" onClick={() => setShowImport(true)}>
-                <Icon.Import size={15} /> Import
+                <Icon.Import size={15} /> {t('dashboard.import')}
               </Button>
             </div>
           }
@@ -151,11 +153,11 @@ export function DashboardPage() {
         <div className="rounded-2xl border border-border bg-surface px-4">
           <div className="flex items-center gap-4 border-b border-border py-2.5 text-[11px] font-medium uppercase tracking-wide text-subtle">
             <span className="w-[3px]" />
-            <span className="flex-1">List</span>
-            <span className="hidden w-16 shrink-0 text-right sm:block">Words</span>
-            <span className="w-10 shrink-0 text-right">Due</span>
-            <span className="hidden w-28 shrink-0 md:block">Mastery</span>
-            <span className="hidden w-24 shrink-0 text-right lg:block">Last studied</span>
+            <span className="flex-1">{t('dashboard.col.list')}</span>
+            <span className="hidden w-16 shrink-0 text-right sm:block">{t('dashboard.col.words')}</span>
+            <span className="w-10 shrink-0 text-right">{t('dashboard.col.due')}</span>
+            <span className="hidden w-28 shrink-0 md:block">{t('dashboard.col.mastery')}</span>
+            <span className="hidden w-24 shrink-0 text-right lg:block">{t('dashboard.col.lastStudied')}</span>
           </div>
           {visibleLists.map((list) => {
             const summary = summaries.get(list.id);
@@ -171,23 +173,23 @@ export function DashboardPage() {
             onClick={() => setShowNewList(true)}
             className="text-muted underline decoration-border underline-offset-4 transition hover:text-ink"
           >
-            New list
+            {t('dashboard.newList')}
           </button>
           <button
             onClick={() => setShowNewFolder(true)}
             className="text-muted underline decoration-border underline-offset-4 transition hover:text-ink"
           >
-            New folder
+            {t('dashboard.newFolder')}
           </button>
           <button
             onClick={() => setShowImport(true)}
             className="text-muted underline decoration-border underline-offset-4 transition hover:text-ink"
           >
-            Import CSV, Excel or paste
+            {t('dashboard.import')}
           </button>
         </div>
         <div className="flex items-center gap-3 text-xs text-subtle">
-          <span>Stored on this device only</span>
+          <span>{t('dashboard.storedLocally')}</span>
           <input
             ref={restoreRef}
             type="file"
@@ -199,10 +201,10 @@ export function DashboardPage() {
             }}
           />
           <button onClick={() => restoreRef.current?.click()} className="underline underline-offset-4 hover:text-ink">
-            Restore
+            {t('dashboard.restore')}
           </button>
           <button onClick={() => void downloadBackup()} className="underline underline-offset-4 hover:text-ink">
-            Backup
+            {t('dashboard.backup')}
           </button>
         </div>
       </div>

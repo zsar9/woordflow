@@ -9,11 +9,13 @@ import { EmptyState } from '@/components/ui/primitives';
 import { Icon } from '@/components/ui/Icon';
 import { cn } from '@/lib/cn';
 import { languageAccent } from '@/lib/languageColor';
+import { useT } from '@/hooks/useT';
 
 export function StoriesPage() {
   const [level, setLevel] = useState<StoryLevel | 'all'>('all');
   const [language, setLanguage] = useState<string | 'all'>('all');
   const progressList = useLiveQuery(() => db.storyProgress.toArray(), [], []);
+  const t = useT();
 
   const progressById = useMemo(
     () => new Map((progressList ?? []).map((p) => [p.storyId, p])),
@@ -54,31 +56,16 @@ export function StoriesPage() {
   return (
     <div>
       <div className="mb-6">
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">Stories</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-ink">{t('stories.title')}</h1>
         <p className="mt-0.5 text-sm text-muted">
-          Read short stories from A1 to C1, then test yourself on the vocabulary, content
-          and subject.
-          {readCount > 0 && ` You've read ${readCount} so far.`}
+          {t('stories.subtitle')}
+          {readCount > 0 && ` ${t('stories.readSoFar')} ${readCount} ${t('stories.soFar')}`}
         </p>
       </div>
 
       <div className="mb-3 flex flex-wrap gap-1.5">
-        <LevelChip active={level === 'all'} onClick={() => setLevel('all')}>
-          All levels
-        </LevelChip>
-        {STORY_LEVELS.map((l) => (
-          <LevelChip key={l} active={level === l} onClick={() => setLevel(l)}>
-            {l} · {STORY_LEVEL_META[l].description}
-          </LevelChip>
-        ))}
-      </div>
-
-      <div className="mb-6 flex flex-wrap gap-1.5">
-        <LevelChip active={language === 'all'} onClick={() => setLanguage('all')}>
-          All languages
-        </LevelChip>
         {languages.map((l) => (
-          <LevelChip key={l} active={language === l} onClick={() => setLanguage(l)}>
+          <LevelChip key={l} active={language === l} onClick={() => setLanguage(language === l ? 'all' : l)}>
             <span
               className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle"
               style={{ backgroundColor: languageAccent(l).hex }}
@@ -88,8 +75,19 @@ export function StoriesPage() {
         ))}
       </div>
 
+      <div className="mb-6 flex flex-wrap gap-1.5">
+        <LevelChip active={level === 'all'} onClick={() => setLevel('all')}>
+          {t('stories.allLevels')}
+        </LevelChip>
+        {STORY_LEVELS.map((l) => (
+          <LevelChip key={l} active={level === l} onClick={() => setLevel(l)}>
+            {l} · {STORY_LEVEL_META[l].description}
+          </LevelChip>
+        ))}
+      </div>
+
       {visible.length === 0 ? (
-        <EmptyState icon={<Icon.Book size={32} />} title="No stories at this level yet" />
+        <EmptyState icon={<Icon.Book size={32} />} title={t('stories.empty')} />
       ) : (
         <div className="space-y-8">
           {groups.map(({ language: lang, stories }) => {
@@ -103,7 +101,7 @@ export function StoriesPage() {
                   />
                   <h2 className="text-lg font-semibold text-ink">{lang}</h2>
                   <span className="text-sm text-subtle">
-                    {stories.length} {stories.length === 1 ? 'story' : 'stories'}
+                    {stories.length} {stories.length === 1 ? t('stories.story') : t('stories.stories')}
                   </span>
                 </div>
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
