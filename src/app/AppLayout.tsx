@@ -7,6 +7,7 @@ import { cn } from '@/lib/cn';
 import { GlobalSearch } from '@/features/dashboard/GlobalSearch';
 import { useStreak } from '@/features/stats/useStreak';
 import { seedIfEmpty } from '@/lib/seed';
+import { installCurriculum } from '@/features/curriculum/install';
 import { useT } from '@/hooks/useT';
 
 export function AppLayout() {
@@ -22,9 +23,13 @@ export function AppLayout() {
     { to: '/settings', label: t('nav.settings'), icon: Icon.Settings, end: false },
   ];
 
-  // Seed demo content on first ever run.
+  // Install the built-in curriculum (idempotent — a no-op once it's in), then
+  // fall back to the small demo seed for anyone who somehow ends up with an
+  // empty library. Both are safe to call on every mount.
   useEffect(() => {
-    seedIfEmpty();
+    void installCurriculum()
+      .then(() => seedIfEmpty())
+      .catch((err) => console.error('Curriculum install failed', err));
   }, []);
 
   // Cmd/Ctrl-K opens global search.

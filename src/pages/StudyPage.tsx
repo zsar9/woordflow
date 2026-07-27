@@ -35,9 +35,9 @@ export function StudyPage() {
       count: 'all',
       direction: settings.defaultDirection,
       order: 'only-incorrect',
-      enableHints: settings.enableHints,
-      enableFuzzy: settings.enableFuzzy,
-      forgiveness: settings.forgiveness,
+      enableHints: true,
+      enableFuzzy: true,
+      forgiveness: 'balanced',
       askConfidence: false,
       onlyDifficult: false,
       onlyIncorrect: true,
@@ -83,8 +83,6 @@ export function StudyPage() {
       listName={data.list.name}
       isReview={isReviewMode}
       autoAdvanceMs={settings.autoAdvanceMs}
-      askConfidence={config.askConfidence}
-      enableHints={config.enableHints}
       onExit={(sessionId) => navigate(`/session/${sessionId}/report`)}
       onQuit={() => navigate(`/list/${listId}`)}
     />
@@ -102,8 +100,6 @@ function StudyRunner(props: {
   listName: string;
   isReview: boolean;
   autoAdvanceMs: number;
-  askConfidence: boolean;
-  enableHints: boolean;
   onExit: (sessionId: string) => void;
   onQuit: () => void;
 }) {

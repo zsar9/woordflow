@@ -17,16 +17,15 @@ import { putStat, saveSession, recordActivity, updateList } from '@/db/repo';
 
 export type Phase =
   | 'prompt' // awaiting input
-  | 'correct' // showed correct feedback, auto-advancing
-  | 'incorrect' // showed the right answer, awaiting continue
-  | 'almost' // near-miss, awaiting Y/N
-  | 'confidence' // asking confidence after a correct answer
+  | 'correct' // showed correct feedback + spelling, auto-advancing
+  | 'incorrect' // showed the right answer, awaiting continue / self-approval
+  | 'almost' // near-miss, awaiting continue / self-approval
   | 'done';
 
 export interface EngineState {
   phase: Phase;
   index: number; // pointer into the (growing) queue
-  total: number; // planned total for progress display
+  total: number; // questions in the queue right now, retries included
   answeredCount: number;
   current?: Question;
   input: string;
@@ -34,16 +33,19 @@ export interface EngineState {
   lastResult?: GradeResult;
   hintText: string;
   hintsUsedForCurrent: number;
+  /** True once we've moved past the first pass into the repeat round. */
+  isRetryRound: boolean;
+  /** Questions still ahead, queued repeats included. */
+  remaining: number;
 }
 
 export interface StudyEngine extends EngineState {
   setInput: (v: string) => void;
   submit: () => void;
-  continueNext: () => void; // Space/Enter after incorrect
-  confirmAlmost: (asCorrect: boolean) => void; // Y / N
+  continueNext: () => void; // Space/Enter after a wrong answer
+  markCorrect: () => void; // "I was right" — learner overrides the grader
   useHint: () => void;
   skip: () => void;
-  rateConfidence: (c: Confidence) => void;
   exit: () => Promise<StudySession>; // persist & return the session
   progress: number; // 0..1
 }
@@ -55,13 +57,17 @@ interface InitArgs {
   listName: string;
   isReview?: boolean;
   autoAdvanceMs: number;
-  askConfidence: boolean;
 }
 
-/** Grade config derived from a session config. */
-function gradeConfig(config: SessionConfig) {
-  return { forgiveness: config.forgiveness, enableFuzzy: config.enableFuzzy };
-}
+/**
+ * Answer checking is always balanced fuzzy matching — the setup screen no
+ * longer exposes strictness. When the grader is wrong the learner overrides it
+ * with the "I was right" button instead of pre-tuning a slider.
+ */
+const GRADE_CONFIG = { forgiveness: 'balanced' as const, enableFuzzy: true };
+
+/** How long a correct answer stays on screen so the spelling can be read. */
+const MIN_CORRECT_DWELL_MS = 900;
 
 export function computeSummary(
   items: SessionItem[],
@@ -123,15 +129,7 @@ export function computeSummary(
 }
 
 export function useStudyEngine(args: InitArgs): StudyEngine {
-  const {
-    words,
-    stats,
-    config,
-    listName,
-    isReview,
-    autoAdvanceMs,
-    askConfidence,
-  } = args;
+  const { words, stats, config, listName, isReview, autoAdvanceMs } = args;
 
   // Build the queue once per mount (stable RNG via Math.random is fine here).
   const initialQueue = useMemo(
@@ -147,11 +145,23 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
   const itemsRef = useRef<SessionItem[]>([]);
   const sessionStart = useRef(now());
   const questionStart = useRef(now());
-  const plannedTotal = useRef(initialQueue.length);
-  const masteryBaseline = useRef(
-    stats.reduce((acc, s) => acc + s.mastery, 0),
-  );
-  const pendingConfidenceItem = useRef<SessionItem | null>(null);
+  /** Length of the first pass — anything at or beyond this index is a repeat. */
+  const firstPassLength = useRef(initialQueue.length);
+  const masteryBaseline = useRef(stats.reduce((acc, s) => acc + s.mastery, 0));
+
+  /**
+   * The verdict being shown in the incorrect/almost phase. It is not written to
+   * the session or the SRS until the learner either continues (accepting it) or
+   * overrides it — so "I was right" never has to undo a scheduling update.
+   */
+  const pendingItem = useRef<SessionItem | null>(null);
+
+  /**
+   * Word ids already sent back once for being answered wrongly. A wrong answer
+   * earns exactly one repeat, so a word the learner keeps missing cannot trap
+   * them in an endless loop. Skips are unbounded — see `skip()`.
+   */
+  const repeatedAfterWrong = useRef<Set<string>>(new Set());
 
   const [state, setState] = useState<EngineState>(() => ({
     phase: initialQueue.length ? 'prompt' : 'done',
@@ -163,6 +173,8 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
     streak: 0,
     hintText: '',
     hintsUsedForCurrent: 0,
+    isRetryRound: false,
+    remaining: initialQueue.length,
   }));
 
   // Keep a ref to latest state for callbacks that need it synchronously.
@@ -183,7 +195,14 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
 
   /** Persist a stat update for a given word using the SRS. */
   const applyStat = useCallback(
-    (wordId: string, outcome: AnswerOutcome, responseMs: number, hints: number, charsTyped: number, confidence?: Confidence) => {
+    (
+      wordId: string,
+      outcome: AnswerOutcome,
+      responseMs: number,
+      hints: number,
+      charsTyped: number,
+      confidence?: Confidence,
+    ) => {
       const prev = statsMap.current.get(wordId);
       if (!prev) return;
       const next = applyReview(prev, {
@@ -200,12 +219,18 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
     [],
   );
 
+  /** Send a word to the very back of the session so it comes round again. */
+  const requeue = useCallback((q: Question) => {
+    queueRef.current.push(buildQuestion(q.word, q.direction));
+  }, []);
+
   const goToIndex = useCallback((nextIndex: number) => {
     clearTimer();
+    pendingItem.current = null;
     const q = queueRef.current[nextIndex];
     questionStart.current = now();
     if (!q) {
-      setState((s) => ({ ...s, phase: 'done' }));
+      setState((s) => ({ ...s, phase: 'done', remaining: 0 }));
       return;
     }
     setState((s) => ({
@@ -217,33 +242,33 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
       hintText: '',
       hintsUsedForCurrent: 0,
       lastResult: undefined,
-      total: Math.max(plannedTotal.current, queueRef.current.length),
+      total: queueRef.current.length,
+      isRetryRound: nextIndex >= firstPassLength.current,
+      remaining: queueRef.current.length - nextIndex,
     }));
   }, []);
 
-  const recordItem = useCallback(
+  const buildItem = useCallback(
     (outcome: AnswerOutcome, given: string, overridden?: boolean): SessionItem => {
       const s = stateRef.current;
       const q = s.current!;
-      const responseMs = now() - questionStart.current;
-      const item: SessionItem = {
+      return {
         wordId: q.word.id,
         direction: q.direction,
         prompt: q.prompt,
         expected: q.expected,
         given,
         outcome,
-        responseMs,
+        responseMs: now() - questionStart.current,
         hintsUsed: s.hintsUsedForCurrent,
         overridden,
       };
-      return item;
     },
     [],
   );
 
-  const finishItem = useCallback(
-    (item: SessionItem, confidence?: Confidence) => {
+  const commitItem = useCallback(
+    (item: SessionItem) => {
       itemsRef.current.push(item);
       applyStat(
         item.wordId,
@@ -251,7 +276,6 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
         item.responseMs,
         item.hintsUsed,
         item.given.length,
-        confidence,
       );
     },
     [applyStat],
@@ -267,69 +291,64 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
     const s = stateRef.current;
     if (s.phase !== 'prompt' || !s.current) return;
     const given = s.input.trim();
-    if (!given) return;
-    const result = gradeAnswer(given, s.current.accepted, gradeConfig(config));
+
+    // Enter on an empty field is a wrong answer, not a no-op: same instant
+    // feedback, same correct spelling, and the word comes back at the end.
+    const result: GradeResult = given
+      ? gradeAnswer(given, s.current.accepted, GRADE_CONFIG)
+      : { verdict: 'incorrect' };
 
     if (result.verdict === 'correct') {
-      const item = recordItem('correct', given);
-      if (askConfidence) {
-        pendingConfidenceItem.current = item;
-        setState((st) => ({ ...st, phase: 'confidence', lastResult: result, streak: st.streak + 1 }));
-      } else {
-        finishItem(item);
-        setState((st) => ({ ...st, phase: 'correct', lastResult: result, streak: st.streak + 1 }));
-        advanceTimer.current = setTimeout(proceedAfterAnswer, Math.max(150, autoAdvanceMs));
-      }
-    } else if (result.verdict === 'almost') {
-      setState((st) => ({ ...st, phase: 'almost', lastResult: result }));
-    } else {
-      const item = recordItem('incorrect', given);
-      finishItem(item);
-      setState((st) => ({ ...st, phase: 'incorrect', lastResult: result, streak: 0 }));
+      commitItem(buildItem('correct', given));
+      setState((st) => ({
+        ...st,
+        phase: 'correct',
+        lastResult: result,
+        streak: st.streak + 1,
+      }));
+      advanceTimer.current = setTimeout(
+        proceedAfterAnswer,
+        Math.max(MIN_CORRECT_DWELL_MS, autoAdvanceMs),
+      );
+      return;
     }
-  }, [config, askConfidence, autoAdvanceMs, recordItem, finishItem, proceedAfterAnswer]);
 
-  const confirmAlmost = useCallback(
-    (asCorrect: boolean) => {
-      const s = stateRef.current;
-      if (s.phase !== 'almost') return;
-      const given = s.input.trim();
-      if (asCorrect) {
-        const item = recordItem('correct', given, true);
-        if (askConfidence) {
-          pendingConfidenceItem.current = item;
-          setState((st) => ({ ...st, phase: 'confidence', streak: st.streak + 1 }));
-          return;
-        }
-        finishItem(item);
-        setState((st) => ({ ...st, phase: 'correct', streak: st.streak + 1 }));
-        advanceTimer.current = setTimeout(proceedAfterAnswer, Math.max(150, autoAdvanceMs));
-      } else {
-        const item = recordItem('almost', given, true);
-        finishItem(item);
-        setState((st) => ({ ...st, phase: 'incorrect', streak: 0 }));
-      }
-    },
-    [askConfidence, autoAdvanceMs, recordItem, finishItem, proceedAfterAnswer],
-  );
+    pendingItem.current = buildItem(
+      result.verdict === 'almost' ? 'almost' : 'incorrect',
+      given,
+    );
+    setState((st) => ({
+      ...st,
+      phase: result.verdict === 'almost' ? 'almost' : 'incorrect',
+      lastResult: result,
+      streak: 0,
+    }));
+  }, [autoAdvanceMs, buildItem, commitItem, proceedAfterAnswer]);
 
-  const rateConfidence = useCallback(
-    (c: Confidence) => {
-      const item = pendingConfidenceItem.current;
-      if (!item) return;
-      pendingConfidenceItem.current = null;
-      item.confidence = c;
-      finishItem(item, c);
-      proceedAfterAnswer();
-    },
-    [finishItem, proceedAfterAnswer],
-  );
-
+  /** Accept the verdict, queue the word for the repeat round, and move on. */
   const continueNext = useCallback(() => {
     const s = stateRef.current;
-    if (s.phase !== 'incorrect') return;
+    if (s.phase !== 'incorrect' && s.phase !== 'almost') return;
+    const item = pendingItem.current;
+    if (item) {
+      commitItem(item);
+      if (s.current && !repeatedAfterWrong.current.has(item.wordId)) {
+        repeatedAfterWrong.current.add(item.wordId);
+        requeue(s.current);
+      }
+    }
     proceedAfterAnswer();
-  }, [proceedAfterAnswer]);
+  }, [commitItem, proceedAfterAnswer, requeue]);
+
+  /** The learner overrides the grader: count this answer as correct. */
+  const markCorrect = useCallback(() => {
+    const s = stateRef.current;
+    if (s.phase !== 'incorrect' && s.phase !== 'almost') return;
+    const item = pendingItem.current;
+    if (item) commitItem({ ...item, outcome: 'correct', overridden: true });
+    setState((st) => ({ ...st, streak: st.streak + 1 }));
+    proceedAfterAnswer();
+  }, [commitItem, proceedAfterAnswer]);
 
   const useHint = useCallback(() => {
     setState((s) => {
@@ -344,19 +363,18 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
     });
   }, []);
 
+  /**
+   * Skip = "not now", never "not at all". The word always goes to the back of
+   * the queue, with no cap, so a session can't end on a word that was never
+   * actually answered.
+   */
   const skip = useCallback(() => {
     const s = stateRef.current;
     if (s.phase !== 'prompt' || !s.current) return;
-    // Record a skip item (counted, no schedule change) and requeue for later.
-    const item = recordItem('skipped', s.input.trim());
-    finishItem(item);
-    // Re-insert the same word a few positions later so it returns this session.
-    const q = s.current;
-    const insertAt = Math.min(queueRef.current.length, s.index + 4);
-    queueRef.current.splice(insertAt, 0, buildQuestion(q.word, q.direction));
-    plannedTotal.current = queueRef.current.length;
+    commitItem(buildItem('skipped', s.input.trim()));
+    requeue(s.current);
     proceedAfterAnswer();
-  }, [recordItem, finishItem, proceedAfterAnswer]);
+  }, [buildItem, commitItem, proceedAfterAnswer, requeue]);
 
   const exit = useCallback(async (): Promise<StudySession> => {
     clearTimer();
@@ -413,10 +431,9 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
     setInput,
     submit,
     continueNext,
-    confirmAlmost,
+    markCorrect,
     useHint,
     skip,
-    rateConfidence,
     exit,
     progress,
   };

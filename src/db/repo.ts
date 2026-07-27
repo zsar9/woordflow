@@ -49,6 +49,7 @@ export async function createFolder(
     icon: input.icon,
     color: input.color,
     order,
+    sourceKey: input.sourceKey,
     createdAt: now(),
     updatedAt: now(),
   };
@@ -92,6 +93,7 @@ export async function createList(
     nativeLanguage: input.nativeLanguage ?? 'English',
     description: input.description,
     category: input.category,
+    sourceKey: input.sourceKey,
     createdAt: now(),
     updatedAt: now(),
     order: input.order ?? (await db.lists.count()),
@@ -134,6 +136,9 @@ export async function duplicateList(id: string): Promise<StudyList | undefined> 
     ...src,
     name: `${src.name} (copy)`,
     id: undefined,
+    // A copy is the user's own list, not installed content — otherwise the
+    // curriculum installer would see two lists claiming the same identity.
+    sourceKey: undefined,
   });
   const words = await db.words.where('listId').equals(id).sortBy('order');
   const cloned = words.map((w, i) => ({

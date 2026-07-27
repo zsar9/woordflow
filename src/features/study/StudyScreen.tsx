@@ -1,8 +1,7 @@
 import type * as React from 'react';
 import { useEffect, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import type { Confidence, SessionConfig, Word, WordStat } from '@/types';
-import { CONFIDENCE_META } from '@/types';
+import type { SessionConfig, Word, WordStat } from '@/types';
 import { useStudyEngine } from './useStudyEngine';
 import { useHotkeys } from '@/hooks/useHotkeys';
 import { Icon } from '@/components/ui/Icon';
@@ -16,19 +15,9 @@ interface Props {
   listName: string;
   isReview?: boolean;
   autoAdvanceMs: number;
-  askConfidence: boolean;
-  enableHints: boolean;
   onExit: (sessionId: string) => void;
   onQuit: () => void;
 }
-
-const CONFIDENCE_ORDER: Confidence[] = [
-  'very-easy',
-  'easy',
-  'unsure',
-  'guessed',
-  'lucky',
-];
 
 export function StudyScreen(props: Props) {
   const eng = useStudyEngine(props);
@@ -47,70 +36,58 @@ export function StudyScreen(props: Props) {
     props.onExit(session.id);
   };
 
-  // Finish automatically when the queue is exhausted.
+  // Finish automatically when the queue — repeats included — is exhausted.
   useEffect(() => {
     if (eng.phase === 'done') void finish();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [eng.phase]);
 
+  const awaitingVerdict = eng.phase === 'incorrect' || eng.phase === 'almost';
+
   // ----- keyboard shortcuts -----
-  useHotkeys(
-    {
-      Enter: (e) => {
-        e.preventDefault();
-        if (eng.phase === 'prompt') eng.submit();
-        else if (eng.phase === 'incorrect') eng.continueNext();
-        else if (eng.phase === 'almost') eng.confirmAlmost(true);
-      },
-      ' ': (e) => {
-        if (eng.phase === 'incorrect' || eng.phase === 'correct') {
-          e.preventDefault();
-          if (eng.phase === 'incorrect') eng.continueNext();
-        }
-      },
-      Escape: (e) => {
-        e.preventDefault();
-        void finish();
-      },
-      Tab: (e) => {
-        // Tab = "I don't know" → skip, always available while answering.
-        if (eng.phase === 'prompt') {
-          e.preventDefault();
-          eng.skip();
-        }
-      },
-      y: () => {
-        // Only meaningful once the answer field is disabled (almost phase).
-        if (eng.phase === 'almost') eng.confirmAlmost(true);
-      },
-      n: () => {
-        if (eng.phase === 'almost') eng.confirmAlmost(false);
-      },
-      h: (e) => {
-        // Hint via keyboard only when nothing has been typed yet, so it never
-        // eats an 'h' the user is typing into an answer. The on-screen button
-        // works at any time.
-        if (eng.phase === 'prompt' && props.enableHints && eng.input.trim() === '') {
-          e.preventDefault();
-          eng.useHint();
-        }
-      },
-      s: (e) => {
-        if (eng.phase === 'prompt' && eng.input.trim() === '') {
-          e.preventDefault();
-          eng.skip();
-        }
-      },
-      '1': () => eng.phase === 'confidence' && eng.rateConfidence('very-easy'),
-      '2': () => eng.phase === 'confidence' && eng.rateConfidence('easy'),
-      '3': () => eng.phase === 'confidence' && eng.rateConfidence('unsure'),
-      '4': () => eng.phase === 'confidence' && eng.rateConfidence('guessed'),
-      '5': () => eng.phase === 'confidence' && eng.rateConfidence('lucky'),
+  useHotkeys({
+    Enter: (e) => {
+      e.preventDefault();
+      if (eng.phase === 'prompt') eng.submit();
+      else if (awaitingVerdict) eng.continueNext();
     },
-  );
+    ' ': (e) => {
+      if (awaitingVerdict) {
+        e.preventDefault();
+        eng.continueNext();
+      }
+    },
+    Escape: (e) => {
+      e.preventDefault();
+      void finish();
+    },
+    Tab: (e) => {
+      // Tab = "not now" → the word returns at the end of the session.
+      if (eng.phase === 'prompt') {
+        e.preventDefault();
+        eng.skip();
+      }
+    },
+    y: () => {
+      // Y = "I was right", overriding the grader.
+      if (awaitingVerdict) eng.markCorrect();
+    },
+    '?': (e) => {
+      // Hotkeys fire even while the answer field has focus, so the hint key
+      // must be one that never begins a real answer. A letter would not do:
+      // 'h' would swallow the first keystroke of "hola", "hoy", "hablar"…
+      if (eng.phase === 'prompt') {
+        e.preventDefault();
+        eng.useHint();
+      }
+    },
+  });
 
   const current = eng.current;
-  const dir = current?.direction === 'foreign-to-native' ? 'Translate' : 'Type in the target language';
+  const dir =
+    current?.direction === 'foreign-to-native'
+      ? 'Translate'
+      : 'Type in the target language';
 
   return (
     <div className="flex min-h-screen flex-col bg-canvas">
@@ -164,7 +141,7 @@ export function StudyScreen(props: Props) {
                 transition={{ duration: 0.16 }}
               >
                 <div className="eyebrow mb-2 text-center">
-                  {dir}
+                  {eng.isRetryRound ? 'Second look' : dir}
                   {props.isReview && ' · Mistake review'}
                 </div>
                 <div
@@ -175,20 +152,16 @@ export function StudyScreen(props: Props) {
                 </div>
 
                 {/* Input + feedback */}
-                <FeedbackArea eng={eng} inputRef={inputRef} enableHints={props.enableHints} />
+                <FeedbackArea eng={eng} inputRef={inputRef} />
               </motion.div>
             </AnimatePresence>
           )}
         </div>
       </div>
 
-      {/* Footer: shortcut hints / confidence selector */}
+      {/* Footer: shortcut hints */}
       <footer className="px-5 py-5">
-        {eng.phase === 'confidence' ? (
-          <ConfidenceSelector onRate={eng.rateConfidence} />
-        ) : (
-          <ShortcutBar phase={eng.phase} enableHints={props.enableHints} />
-        )}
+        <ShortcutBar phase={eng.phase} />
       </footer>
     </div>
   );
@@ -197,16 +170,15 @@ export function StudyScreen(props: Props) {
 function FeedbackArea({
   eng,
   inputRef,
-  enableHints,
 }: {
   eng: ReturnType<typeof useStudyEngine>;
   inputRef: React.RefObject<HTMLInputElement>;
-  enableHints: boolean;
 }) {
   const isPrompt = eng.phase === 'prompt';
   const isCorrect = eng.phase === 'correct';
   const isIncorrect = eng.phase === 'incorrect';
   const isAlmost = eng.phase === 'almost';
+  const showVerdict = isIncorrect || isAlmost;
 
   const borderTone = isCorrect
     ? 'border-success'
@@ -239,22 +211,20 @@ function FeedbackArea({
         />
         {isPrompt && (
           <div className="flex shrink-0 items-center gap-1">
-            {enableHints && (
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={eng.useHint}
-                title="Hint (H)"
-                className="rounded-lg p-1.5 text-subtle transition hover:bg-elevated hover:text-warning"
-              >
-                <Icon.Bulb size={18} />
-              </button>
-            )}
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={eng.useHint}
+              title="Hint (?)"
+              className="rounded-lg p-1.5 text-subtle transition hover:bg-elevated hover:text-warning"
+            >
+              <Icon.Bulb size={18} />
+            </button>
             <button
               type="button"
               onMouseDown={(e) => e.preventDefault()}
               onClick={eng.skip}
-              title="Skip (Tab)"
+              title="Not now — asks again at the end (Tab)"
               className="rounded-lg p-1.5 text-subtle transition hover:bg-elevated hover:text-ink"
             >
               <Icon.Skip size={18} />
@@ -280,9 +250,29 @@ function FeedbackArea({
         </div>
       )}
 
-      {/* Almost / incorrect detail */}
+      {/* Correct: confirm the spelling before moving on. */}
       <AnimatePresence>
-        {(isAlmost || isIncorrect) && eng.current && (
+        {isCorrect && eng.current && (
+          <motion.div
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-3 text-center"
+          >
+            <div className="text-sm font-medium text-success">Correct</div>
+            <div className="font-serif text-xl text-ink" dir="auto">
+              {eng.current.expected}
+            </div>
+            {eng.current.notes && (
+              <div className="mt-1 text-xs text-muted">{eng.current.notes}</div>
+            )}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Wrong or near-miss: show the spelling, offer a self-override. */}
+      <AnimatePresence>
+        {showVerdict && eng.current && (
           <motion.div
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
@@ -290,15 +280,21 @@ function FeedbackArea({
             className="overflow-hidden"
           >
             <div className="mt-4 rounded-2xl border border-border bg-elevated p-4">
-              {isAlmost && (
-                <div className="mb-2 text-sm font-medium text-warning">
-                  Very close — count it as correct?
-                </div>
-              )}
+              <div
+                className={cn(
+                  'mb-2 text-sm font-medium',
+                  isAlmost ? 'text-warning' : 'text-danger',
+                )}
+              >
+                {isAlmost ? 'Very close' : 'Not quite'}
+              </div>
               <div className="flex flex-col gap-2 text-sm">
                 <Row label="Your answer">
-                  <span className={isAlmost ? 'text-warning' : 'text-danger'} dir="auto">
-                    {eng.input || '—'}
+                  <span
+                    className={isAlmost ? 'text-warning' : 'text-danger'}
+                    dir="auto"
+                  >
+                    {eng.input.trim() || '— nothing typed —'}
                   </span>
                 </Row>
                 <Row label="Correct answer">
@@ -313,27 +309,24 @@ function FeedbackArea({
                 )}
               </div>
 
-              {isAlmost ? (
-                <div className="mt-4 flex gap-2">
-                  <button
-                    onClick={() => eng.confirmAlmost(true)}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-success px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-110"
-                  >
-                    <Icon.Check size={16} /> Correct <span className="kbd bg-white/20 text-white">Y</span>
-                  </button>
-                  <button
-                    onClick={() => eng.confirmAlmost(false)}
-                    className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-danger px-4 py-2.5 text-sm font-medium text-white transition hover:brightness-110"
-                  >
-                    <Icon.X size={16} /> Incorrect <span className="kbd bg-white/20 text-white">N</span>
-                  </button>
-                </div>
-              ) : (
-                <div className="mt-4 text-center text-xs text-subtle">
-                  Press <span className="kbd">Space</span> or{' '}
-                  <span className="kbd">Enter</span> to continue
-                </div>
-              )}
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                <button
+                  onClick={eng.continueNext}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-medium text-canvas transition hover:brightness-125"
+                >
+                  Continue <span className="kbd bg-white/20 text-canvas">Enter</span>
+                </button>
+                <button
+                  onClick={eng.markCorrect}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-success/50 px-4 py-2.5 text-sm font-medium text-success transition hover:bg-success/10"
+                >
+                  <Icon.Check size={16} /> I was right{' '}
+                  <span className="kbd">Y</span>
+                </button>
+              </div>
+              <p className="mt-2 text-center text-xs text-subtle">
+                Continuing asks this word once more at the end of the session.
+              </p>
             </div>
           </motion.div>
         )}
@@ -364,56 +357,22 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-function ConfidenceSelector({ onRate }: { onRate: (c: Confidence) => void }) {
-  return (
-    <div className="mx-auto max-w-xl">
-      <div className="mb-2 text-center text-xs font-medium uppercase tracking-widest text-subtle">
-        How confident were you?
-      </div>
-      <div className="flex justify-center gap-2">
-        {CONFIDENCE_ORDER.map((c, i) => (
-          <button
-            key={c}
-            onClick={() => onRate(c)}
-            className="flex flex-col items-center gap-1 rounded-xl border border-border bg-surface px-3 py-2 text-center transition hover:border-brand hover:bg-elevated"
-          >
-            <span className="text-2xl">{CONFIDENCE_META[c].emoji}</span>
-            <span className="text-[11px] text-muted">{CONFIDENCE_META[c].label}</span>
-            <span className="kbd">{i + 1}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ShortcutBar({
-  phase,
-  enableHints,
-}: {
-  phase: string;
-  enableHints: boolean;
-}) {
+function ShortcutBar({ phase }: { phase: string }) {
   return (
     <div className="mx-auto flex max-w-xl flex-wrap items-center justify-center gap-x-4 gap-y-1.5 text-xs text-subtle">
       {phase === 'prompt' && (
         <>
           <Hint k="Enter" label="Submit" />
-          {enableHints && <Hint k="H" label="Hint" />}
-          <Hint k="Tab" label="Skip" />
+          <Hint k="?" label="Hint" />
+          <Hint k="Tab" label="Ask me later" />
           <Hint k="Esc" label="Exit" />
         </>
       )}
-      {phase === 'incorrect' && (
+      {(phase === 'incorrect' || phase === 'almost') && (
         <>
-          <Hint k="Space" label="Continue" />
+          <Hint k="Enter" label="Continue" />
+          <Hint k="Y" label="I was right" />
           <Hint k="Esc" label="Exit" />
-        </>
-      )}
-      {phase === 'almost' && (
-        <>
-          <Hint k="Y" label="Correct" />
-          <Hint k="N" label="Incorrect" />
         </>
       )}
     </div>

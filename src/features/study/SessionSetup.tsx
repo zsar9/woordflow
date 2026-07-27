@@ -1,15 +1,7 @@
 import type * as React from 'react';
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import {
-  QUESTION_ORDER_LABELS,
-  type Direction,
-  type ForgivenessLevel,
-  type QuestionOrder,
-  type SessionConfig,
-  type Settings,
-  type StudyList,
-} from '@/types';
+import type { Direction, SessionConfig, Settings, StudyList } from '@/types';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
 import { cn } from '@/lib/cn';
@@ -22,52 +14,37 @@ interface Props {
   onCancel: () => void;
 }
 
-const COUNTS: (number | 'all')[] = [10, 20, 50, 100, 'all'];
 const DIRECTIONS: { value: Direction | 'mixed'; label: string }[] = [
   { value: 'foreign-to-native', label: 'Foreign → Native' },
   { value: 'native-to-foreign', label: 'Native → Foreign' },
   { value: 'mixed', label: 'Mixed' },
 ];
-const FORGIVENESS: ForgivenessLevel[] = ['strict', 'balanced', 'lenient'];
-const ORDERS: QuestionOrder[] = [
-  'spaced-repetition',
-  'sequential',
-  'random',
-  'weakest-first',
-  'hardest-first',
-  'least-studied',
-  'newest-first',
-  'only-incorrect',
-  'only-difficult',
-  'only-bookmarked',
-];
 
+/**
+ * Everything except the question direction is now fixed, because the defaults
+ * were the only sensible answers: the whole list is always quizzed, the order
+ * is always random, answer checking is always balanced (with an "I was right"
+ * override during the session), and hints are always available.
+ */
 export function SessionSetup({ list, wordCount, settings, onStart, onCancel }: Props) {
-  const [count, setCount] = useState<number | 'all'>(settings.defaultCount);
-  const [direction, setDirection] = useState<Direction | 'mixed'>(settings.defaultDirection);
-  const [order, setOrder] = useState<QuestionOrder>(settings.defaultOrder);
-  const [enableHints, setEnableHints] = useState(settings.enableHints);
-  const [enableFuzzy, setEnableFuzzy] = useState(settings.enableFuzzy);
-  const [forgiveness, setForgiveness] = useState<ForgivenessLevel>(settings.forgiveness);
-  const [askConfidence, setAskConfidence] = useState(settings.askConfidence);
-  const [onlyDifficult, setOnlyDifficult] = useState(false);
-  const [onlyIncorrect, setOnlyIncorrect] = useState(false);
-  const [onlyNew, setOnlyNew] = useState(false);
+  const [direction, setDirection] = useState<Direction | 'mixed'>(
+    settings.defaultDirection,
+  );
 
   const start = () => {
     onStart({
       listId: list.id,
-      count,
+      count: 'all',
       direction,
-      order,
-      enableHints,
-      enableFuzzy,
-      forgiveness,
-      askConfidence,
-      onlyDifficult,
-      onlyIncorrect,
-      onlyNew,
-      onlyBookmarked: order === 'only-bookmarked',
+      order: 'random',
+      enableHints: true,
+      enableFuzzy: true,
+      forgiveness: 'balanced',
+      askConfidence: false,
+      onlyDifficult: false,
+      onlyIncorrect: false,
+      onlyNew: false,
+      onlyBookmarked: false,
     });
   };
 
@@ -87,24 +64,10 @@ export function SessionSetup({ list, wordCount, settings, onStart, onCancel }: P
 
         <h1 className="text-xl font-semibold tracking-tight text-ink">{list.name}</h1>
         <p className="mt-0.5 text-sm text-muted">
-          {list.language} · {wordCount} words available
+          {list.language} · all {wordCount} words, in random order
         </p>
 
-        <div className="mt-6 space-y-5">
-          <Group label="How many">
-            <div className="flex flex-wrap gap-1.5">
-              {COUNTS.map((c) => (
-                <Chip
-                  key={String(c)}
-                  active={count === c}
-                  onClick={() => setCount(c)}
-                >
-                  {c === 'all' ? 'All' : c}
-                </Chip>
-              ))}
-            </div>
-          </Group>
-
+        <div className="mt-6">
           <Group label="Direction">
             <div className="flex flex-wrap gap-1.5">
               {DIRECTIONS.map((d) => (
@@ -118,45 +81,13 @@ export function SessionSetup({ list, wordCount, settings, onStart, onCancel }: P
               ))}
             </div>
           </Group>
-
-          <Group label="Order">
-            <select
-              value={order}
-              onChange={(e) => setOrder(e.target.value as QuestionOrder)}
-              className="w-full rounded-xl border border-border bg-surface px-3.5 py-2.5 text-sm text-ink outline-none focus:border-brand focus:ring-2 focus:ring-brand/30"
-            >
-              {ORDERS.map((o) => (
-                <option key={o} value={o}>
-                  {QUESTION_ORDER_LABELS[o]}
-                </option>
-              ))}
-            </select>
-          </Group>
-
-          <Group label="Answer checking">
-            <div className="flex flex-wrap gap-1.5">
-              {FORGIVENESS.map((f) => (
-                <Chip
-                  key={f}
-                  active={forgiveness === f}
-                  disabled={!enableFuzzy}
-                  onClick={() => setForgiveness(f)}
-                >
-                  {f[0].toUpperCase() + f.slice(1)}
-                </Chip>
-              ))}
-            </div>
-          </Group>
-
-          <div className="grid grid-cols-2 gap-2">
-            <Toggle label="Hints" checked={enableHints} onChange={setEnableHints} />
-            <Toggle label="Fuzzy matching" checked={enableFuzzy} onChange={setEnableFuzzy} />
-            <Toggle label="Ask confidence" checked={askConfidence} onChange={setAskConfidence} />
-            <Toggle label="Only difficult" checked={onlyDifficult} onChange={setOnlyDifficult} />
-            <Toggle label="Only incorrect" checked={onlyIncorrect} onChange={setOnlyIncorrect} />
-            <Toggle label="Only new" checked={onlyNew} onChange={setOnlyNew} />
-          </div>
         </div>
+
+        <ul className="mt-5 space-y-1.5 text-sm text-muted">
+          <Rule>Every word in the list is asked — nothing is sampled.</Rule>
+          <Rule>Anything you get wrong or postpone comes back at the end.</Rule>
+          <Rule>Hints are always one keypress away, and you can overrule the marking.</Rule>
+        </ul>
 
         <Button
           variant="primary"
@@ -172,6 +103,15 @@ export function SessionSetup({ list, wordCount, settings, onStart, onCancel }: P
         </p>
       </motion.div>
     </div>
+  );
+}
+
+function Rule({ children }: { children: React.ReactNode }) {
+  return (
+    <li className="flex items-start gap-2">
+      <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-brand" />
+      <span>{children}</span>
+    </li>
   );
 }
 
@@ -209,41 +149,6 @@ function Chip({
       )}
     >
       {children}
-    </button>
-  );
-}
-
-function Toggle({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  return (
-    <button
-      onClick={() => onChange(!checked)}
-      className={cn(
-        'flex items-center justify-between rounded-xl border px-3 py-2 text-sm transition',
-        checked ? 'border-brand/40 bg-brand/5 text-ink' : 'border-border text-muted',
-      )}
-    >
-      <span>{label}</span>
-      <span
-        className={cn(
-          'relative h-5 w-9 rounded-full transition',
-          checked ? 'bg-brand' : 'bg-elevated',
-        )}
-      >
-        <span
-          className={cn(
-            'absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-all',
-            checked ? 'left-[18px]' : 'left-0.5',
-          )}
-        />
-      </span>
     </button>
   );
 }

@@ -2,6 +2,7 @@ import { useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useLibrary } from '@/features/dashboard/useLibrary';
 import { descendantFolderIds } from '@/features/dashboard/tree';
+import { groupListsByFolder } from '@/features/dashboard/group';
 import { FolderTree } from '@/features/dashboard/FolderTree';
 import { ListCard } from '@/features/dashboard/ListCard';
 import { NewListModal, NewFolderModal } from '@/features/dashboard/CreateModals';
@@ -40,6 +41,13 @@ export function DashboardPage() {
       .filter((l) => !l.archived)
       .sort((a, b) => (b.lastStudiedAt ?? 0) - (a.lastStudiedAt ?? 0) || a.order - b.order);
   }, [lists, folders, selectedFolder]);
+
+  // Lists are shown under a header per folder — with the curriculum installed a
+  // flat list would be ~60 rows of undifferentiated text.
+  const groups = useMemo(
+    () => groupListsByFolder(folders, visibleLists),
+    [folders, visibleLists],
+  );
 
   // Per-language due-word pills for the banner ("24 Spanish · 13 French · 5 Darija").
   const dueByLanguage = useMemo(() => {
@@ -150,18 +158,56 @@ export function DashboardPage() {
           }
         />
       ) : (
-        <div className="rounded-2xl border border-border bg-surface px-4">
-          <div className="flex items-center gap-4 border-b border-border py-2.5 text-[11px] font-medium uppercase tracking-wide text-subtle">
-            <span className="w-[3px]" />
-            <span className="flex-1">{t('dashboard.col.list')}</span>
-            <span className="hidden w-16 shrink-0 text-right sm:block">{t('dashboard.col.words')}</span>
-            <span className="w-10 shrink-0 text-right">{t('dashboard.col.due')}</span>
-            <span className="hidden w-28 shrink-0 md:block">{t('dashboard.col.mastery')}</span>
-            <span className="hidden w-24 shrink-0 text-right lg:block">{t('dashboard.col.lastStudied')}</span>
-          </div>
-          {visibleLists.map((list) => {
-            const summary = summaries.get(list.id);
-            return summary ? <ListCard key={list.id} summary={summary} /> : null;
+        <div className="space-y-8">
+          {groups.map((group) => {
+            const accent = group.language ? languageAccent(group.language) : null;
+            return (
+              <section key={group.folderId ?? 'unfiled'}>
+                <header className="mb-2 px-1">
+                  {group.breadcrumb.length > 0 && (
+                    <p className="text-[11px] font-medium uppercase tracking-wide text-subtle">
+                      {group.breadcrumb.join(' · ')}
+                    </p>
+                  )}
+                  <div className="flex items-baseline gap-2">
+                    {group.icon && (
+                      <span className="text-base leading-none">{group.icon}</span>
+                    )}
+                    <h2 className="font-serif text-xl text-ink">{group.title}</h2>
+                    {accent && (
+                      <span
+                        className="h-1.5 w-1.5 shrink-0 rounded-full"
+                        style={{ backgroundColor: accent.hex }}
+                      />
+                    )}
+                    <span className="ml-auto text-xs tabular-nums text-subtle">
+                      {pluralize(group.lists.length, 'list')}
+                    </span>
+                  </div>
+                </header>
+
+                <div className="rounded-2xl border border-border bg-surface px-4">
+                  <div className="flex items-center gap-4 border-b border-border py-2.5 text-[11px] font-medium uppercase tracking-wide text-subtle">
+                    <span className="w-[3px]" />
+                    <span className="flex-1">{t('dashboard.col.list')}</span>
+                    <span className="hidden w-16 shrink-0 text-right sm:block">
+                      {t('dashboard.col.words')}
+                    </span>
+                    <span className="w-10 shrink-0 text-right">{t('dashboard.col.due')}</span>
+                    <span className="hidden w-28 shrink-0 md:block">
+                      {t('dashboard.col.mastery')}
+                    </span>
+                    <span className="hidden w-24 shrink-0 text-right lg:block">
+                      {t('dashboard.col.lastStudied')}
+                    </span>
+                  </div>
+                  {group.lists.map((list) => {
+                    const summary = summaries.get(list.id);
+                    return summary ? <ListCard key={list.id} summary={summary} /> : null;
+                  })}
+                </div>
+              </section>
+            );
           })}
         </div>
       )}

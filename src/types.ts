@@ -22,6 +22,12 @@ export interface Folder {
   color?: string;
   /** Manual ordering within its parent. */
   order: number;
+  /**
+   * Stable identity for folders that ship with the app (the built-in
+   * curriculum). Absent on folders the user created. Lets the installer
+   * recognise its own content and never duplicate it.
+   */
+  sourceKey?: string;
   createdAt: number;
   updatedAt: number;
 }
@@ -37,6 +43,13 @@ export interface StudyList {
   nativeLanguage: LanguageTag;
   description?: string;
   category?: WordCategory;
+  /**
+   * Stable identity for lists that ship with the app (the built-in curriculum),
+   * e.g. `curriculum.spanish.vocab.07`. Absent on lists the user created. The
+   * installer skips any key it already sees, so user edits and SRS progress on
+   * curriculum lists are never overwritten.
+   */
+  sourceKey?: string;
   createdAt: number;
   updatedAt: number;
   lastStudiedAt?: number;
