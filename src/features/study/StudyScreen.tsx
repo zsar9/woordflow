@@ -163,12 +163,12 @@ export function StudyScreen(props: Props) {
                 exit={{ opacity: 0, y: -8 }}
                 transition={{ duration: 0.16 }}
               >
-                <div className="mb-2 text-center text-xs font-medium uppercase tracking-widest text-subtle">
+                <div className="eyebrow mb-2 text-center">
                   {dir}
                   {props.isReview && ' · Mistake review'}
                 </div>
                 <div
-                  className="mb-8 text-center text-4xl font-semibold leading-tight tracking-tight text-ink sm:text-5xl"
+                  className="mb-8 text-center font-serif text-5xl leading-tight tracking-tight text-ink sm:text-6xl"
                   dir="auto"
                 >
                   {current.prompt}
@@ -209,18 +209,18 @@ function FeedbackArea({
   const isAlmost = eng.phase === 'almost';
 
   const borderTone = isCorrect
-    ? 'border-success ring-success/30'
+    ? 'border-success'
     : isIncorrect
-      ? 'border-danger ring-danger/30'
+      ? 'border-danger'
       : isAlmost
-        ? 'border-warning ring-warning/30'
-        : 'border-border focus-within:border-brand focus-within:ring-brand/30';
+        ? 'border-warning'
+        : 'border-border focus-within:border-ink';
 
   return (
     <div>
       <div
         className={cn(
-          'flex items-center gap-2 rounded-2xl border bg-surface px-4 py-3.5 ring-2 ring-transparent transition',
+          'flex items-center gap-2 border-b-2 bg-transparent px-1 py-3 transition',
           borderTone,
         )}
       >
@@ -235,7 +235,7 @@ function FeedbackArea({
           autoCorrect="off"
           dir="auto"
           placeholder="Type your answer…"
-          className="w-full bg-transparent text-lg text-ink outline-none placeholder:text-subtle disabled:opacity-100"
+          className="w-full bg-transparent font-serif text-2xl text-ink outline-none placeholder:text-subtle placeholder:font-sans placeholder:text-base disabled:opacity-100"
         />
         {isPrompt && (
           <div className="flex shrink-0 items-center gap-1">
@@ -358,10 +358,8 @@ function DiffText({ given, expected }: { given: string; expected: string }) {
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline gap-3">
-      <span className="w-28 shrink-0 text-xs uppercase tracking-wide text-subtle">
-        {label}
-      </span>
-      <span className="min-w-0 break-words">{children}</span>
+      <span className="eyebrow w-28 shrink-0">{label}</span>
+      <span className="min-w-0 break-words font-serif text-lg">{children}</span>
     </div>
   );
 }

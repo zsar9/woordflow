@@ -2,17 +2,9 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import type { Story, StoryProgress } from '@/types';
 import { Icon } from '@/components/ui/Icon';
-import { Badge } from '@/components/ui/primitives';
 import { pluralize } from '@/lib/format';
 import { cn } from '@/lib/cn';
-
-const LEVEL_TONE: Record<Story['level'], 'brand' | 'success' | 'warning' | 'danger'> = {
-  A1: 'success',
-  A2: 'success',
-  B1: 'brand',
-  B2: 'warning',
-  C1: 'danger',
-};
+import { languageAccent } from '@/lib/languageColor';
 
 export function StoryCard({
   story,
@@ -22,6 +14,7 @@ export function StoryCard({
   progress?: StoryProgress;
 }) {
   const navigate = useNavigate();
+  const accent = languageAccent(story.language);
 
   return (
     <motion.button
@@ -36,10 +29,15 @@ export function StoryCard({
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-1.5">
-            <Badge tone={LEVEL_TONE[story.level]}>{story.level}</Badge>
+            <span
+              className="rounded-full border px-2 py-0.5 text-[11px] font-medium"
+              style={{ color: accent.hex, borderColor: accent.hex + '55', backgroundColor: accent.soft }}
+            >
+              {story.level}
+            </span>
             <span className="truncate text-xs text-subtle">{story.topic}</span>
           </div>
-          <h3 className="mt-1.5 truncate text-[15px] font-semibold text-ink group-hover:text-brand">
+          <h3 className="mt-1.5 truncate font-serif text-xl text-ink group-hover:underline">
             {story.title}
           </h3>
           <p className="truncate text-xs text-subtle">{story.translatedTitle}</p>

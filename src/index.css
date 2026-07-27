@@ -7,34 +7,35 @@
    works. Light + dark are defined here; components never hardcode a palette.
 --------------------------------------------------------------------------- */
 :root {
-  --c-canvas: 247 247 249; /* app background */
+  /* "Atlas — Minimal Luxury": paper & ink, with color used as filing, not decor. */
+  --c-canvas: 250 249 246; /* bone */
   --c-surface: 255 255 255; /* cards */
   --c-elevated: 255 255 255; /* popovers/modals */
-  --c-border: 226 227 233;
-  --c-muted: 107 111 123; /* secondary text */
-  --c-subtle: 143 147 160; /* tertiary text */
-  --c-ink: 22 23 30; /* primary text */
-  --c-brand: 99 102 241; /* indigo */
-  --c-brand-soft: 224 226 255;
-  --c-success: 22 163 110;
-  --c-warning: 202 138 4;
-  --c-danger: 220 68 68;
+  --c-border: 231 227 219;
+  --c-muted: 115 111 102; /* secondary text */
+  --c-subtle: 163 157 145; /* tertiary text */
+  --c-ink: 27 26 22; /* primary text */
+  --c-brand: 169 99 63; /* clay — default accent */
+  --c-brand-soft: 240 227 217;
+  --c-success: 91 122 79; /* olive */
+  --c-warning: 191 138 53;
+  --c-danger: 178 66 55;
   color-scheme: light;
 }
 
 .dark {
-  --c-canvas: 9 9 12;
-  --c-surface: 20 20 26;
-  --c-elevated: 28 28 36;
-  --c-border: 39 40 51;
-  --c-muted: 152 156 170;
-  --c-subtle: 110 114 128;
-  --c-ink: 237 238 244;
-  --c-brand: 129 132 248;
-  --c-brand-soft: 40 41 74;
-  --c-success: 52 199 143;
-  --c-warning: 234 179 8;
-  --c-danger: 248 113 113;
+  --c-canvas: 20 19 16;
+  --c-surface: 29 28 24;
+  --c-elevated: 35 34 29;
+  --c-border: 54 52 44;
+  --c-muted: 168 162 150;
+  --c-subtle: 122 117 106;
+  --c-ink: 241 238 231;
+  --c-brand: 205 141 105;
+  --c-brand-soft: 61 44 34;
+  --c-success: 139 173 122;
+  --c-warning: 219 168 92;
+  --c-danger: 214 116 103;
   color-scheme: dark;
 }
 
@@ -48,6 +49,18 @@ body {
   @apply bg-canvas text-ink antialiased font-sans;
   font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
   text-rendering: optimizeLegibility;
+}
+
+/* Atlas typographic signature: serif for headline moments, sans for UI chrome,
+   mono for small uppercase labels/eyebrows. */
+h1 {
+  font-family: theme('fontFamily.serif');
+  font-weight: 400;
+  letter-spacing: -0.01em;
+}
+
+.eyebrow {
+  @apply font-mono text-[11px] uppercase tracking-widest text-subtle;
 }
 
 /* Respect users who prefer reduced motion — never let animation slow study. */

@@ -13,6 +13,11 @@ export function Card({ className, ...props }: HTMLAttributes<HTMLDivElement>) {
   );
 }
 
+/** A small mono, uppercase, tracked label — the Atlas "eyebrow" convention. */
+export function Eyebrow({ children, className }: { children: ReactNode; className?: string }) {
+  return <div className={cn('eyebrow', className)}>{children}</div>;
+}
+
 export function Badge({
   children,
   tone = 'muted',
@@ -80,10 +85,8 @@ export function Stat({
 }) {
   return (
     <div className={cn('rounded-xl border border-border bg-surface p-4', className)}>
-      <div className="text-[11px] font-medium uppercase tracking-wide text-subtle">
-        {label}
-      </div>
-      <div className="mt-1 text-2xl font-semibold tabular-nums text-ink">{value}</div>
+      <div className="eyebrow">{label}</div>
+      <div className="mt-1 font-serif text-3xl tabular-nums text-ink">{value}</div>
       {sub && <div className="mt-0.5 text-xs text-muted">{sub}</div>}
     </div>
   );

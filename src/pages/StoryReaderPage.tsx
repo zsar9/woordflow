@@ -9,9 +9,10 @@ import { recordStoryRead, recordStoryQuizResult, recordActivity } from '@/db/rep
 import { tokenizeParagraph } from '@/lib/storyHighlight';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { Badge, ProgressBar, Stat } from '@/components/ui/primitives';
+import { ProgressBar, Stat } from '@/components/ui/primitives';
 import { STORY_LEVEL_META, STORY_QUESTION_TYPE_LABELS } from '@/types';
 import { cn } from '@/lib/cn';
+import { languageAccent } from '@/lib/languageColor';
 
 type Phase = 'reading' | 'quiz' | 'results';
 
@@ -136,22 +137,30 @@ export function StoryReaderPage() {
   };
 
   if (phase === 'reading') {
+    const accent = languageAccent(story.language);
     return (
       <div className="mx-auto max-w-2xl">
-        <button
-          onClick={() => navigate('/stories')}
-          className="mb-4 flex items-center gap-1.5 text-sm text-muted transition hover:text-ink"
-        >
-          <Icon.Back size={16} /> Back to stories
-        </button>
+        <div className="mb-4 flex items-center gap-1.5 text-sm text-muted">
+          <button onClick={() => navigate('/stories')} className="transition hover:text-ink">
+            Stories
+          </button>
+          <span className="text-subtle">/</span>
+          <span className="truncate text-ink">{story.title}</span>
+        </div>
 
         <div className="mb-1 flex items-center gap-2">
-          <Badge tone="brand">{story.level}</Badge>
+          <span
+            className="rounded-full border px-2 py-0.5 text-[11px] font-medium"
+            style={{ color: accent.hex, borderColor: accent.hex + '55', backgroundColor: accent.soft }}
+          >
+            {story.level}
+          </span>
           <span className="text-xs text-subtle">
-            {STORY_LEVEL_META[story.level].description}
+            {STORY_LEVEL_META[story.level].description} · {story.wordCount} words ·{' '}
+            {story.estMinutes} min
           </span>
         </div>
-        <h1 className="text-2xl font-semibold tracking-tight text-ink">{story.title}</h1>
+        <h1 className="text-4xl text-ink">{story.title}</h1>
         <p className="text-sm text-subtle">{story.translatedTitle}</p>
         <p className="mt-3 text-sm text-muted">{story.summary}</p>
         <p className="mt-3 text-xs text-subtle">
@@ -159,7 +168,7 @@ export function StoryReaderPage() {
         </p>
 
         <div
-          className="mt-6 select-text space-y-4 rounded-2xl border border-border bg-surface p-6"
+          className="mt-6 select-text space-y-4 rounded-2xl border border-border bg-surface p-6 font-serif text-lg"
           onMouseUp={handleTextSelect}
           onTouchEnd={handleTextSelect}
         >
@@ -170,7 +179,8 @@ export function StoryReaderPage() {
                   <span
                     key={j}
                     title={t.glossary.translation}
-                    className="cursor-help border-b border-dotted border-brand/50"
+                    className="cursor-help border-b"
+                    style={{ borderColor: accent.hex + '80' }}
                   >
                     {t.text}
                   </span>

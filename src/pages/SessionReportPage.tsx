@@ -60,8 +60,7 @@ export function SessionReportPage() {
 
   const s = session.summary;
   const gm = gradeMeta(s.grade);
-  const tone =
-    gm.tone === 'success' ? '#16a37a' : gm.tone === 'warning' ? '#ca8a04' : '#dc4444';
+  const totalAnswered = s.correct + s.almost + s.incorrect;
 
   const historyData = (recent ?? [])
     .slice()
@@ -78,21 +77,19 @@ export function SessionReportPage() {
       <div className="mx-auto max-w-2xl">
         {/* Hero */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.96 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center text-center"
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
         >
-          <div
-            className="flex h-24 w-24 items-center justify-center rounded-3xl text-5xl font-bold text-white shadow-pop"
-            style={{ backgroundColor: tone }}
-          >
-            {gm.letter}
+          <div className="eyebrow" style={{ color: '#A9633F' }}>
+            {session.isReview ? 'Review complete' : 'Session complete'} · {formatDuration(s.durationMs)}
           </div>
-          <h1 className="mt-4 text-2xl font-semibold tracking-tight text-ink">
-            {s.grade}% · {session.isReview ? 'Review complete' : 'Session complete'}
+          <h1 className="mt-1 text-5xl leading-tight text-ink">
+            {s.correct} of {totalAnswered},
+            <br />
+            {gm.letter === 'A' || gm.letter === 'B' ? 'first try.' : 'good work.'}
           </h1>
-          <p className="mt-1 text-sm text-muted">
-            {session.listName} · Dutch grade {dutchGrade(s.accuracy).toFixed(1)} · +{s.xp} XP
+          <p className="mt-2 text-sm text-muted">
+            {session.listName} · grade {s.grade}% (Dutch {dutchGrade(s.accuracy).toFixed(1)}) · +{s.xp} XP
           </p>
         </motion.div>
 

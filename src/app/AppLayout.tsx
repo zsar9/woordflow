@@ -37,104 +37,55 @@ export function AppLayout() {
   }, []);
 
   return (
-    <div className="flex h-full min-h-screen bg-canvas">
-      {/* Sidebar */}
-      <aside className="sticky top-0 hidden h-screen w-60 shrink-0 flex-col border-r border-border bg-surface/60 px-3 py-4 backdrop-blur md:flex">
-        <button
-          onClick={() => navigate('/')}
-          className="mb-6 flex items-center gap-2.5 px-2 text-left"
-        >
-          <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand text-white shadow-sm">
-            <svg width="18" height="18" viewBox="0 0 32 32" fill="none">
-              <path
-                d="M8 21 L13 11 L16 18 L19 11 L24 21"
-                stroke="currentColor"
-                strokeWidth="2.6"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-          </span>
-          <span className="text-[15px] font-semibold tracking-tight text-ink">
-            WoordFlow
-          </span>
-        </button>
-
-        <button
-          onClick={() => setSearchOpen(true)}
-          className="mb-4 flex items-center gap-2 rounded-xl border border-border bg-canvas px-3 py-2 text-sm text-subtle transition hover:text-ink"
-        >
-          <Icon.Search size={15} />
-          <span>Search…</span>
-          <span className="kbd ml-auto">⌘K</span>
-        </button>
-
-        <nav className="flex flex-col gap-0.5">
-          {nav.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end}
-              className={({ isActive }) =>
-                cn(
-                  'flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium transition',
-                  isActive
-                    ? 'bg-brand/10 text-brand'
-                    : 'text-muted hover:bg-canvas hover:text-ink',
-                )
-              }
-            >
-              <item.icon size={17} />
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-
-        <div className="mt-auto flex flex-col gap-3">
-          <div className="flex items-center gap-2 rounded-xl border border-border bg-canvas px-3 py-2.5">
-            <span className="text-warning">
-              <Icon.Flame size={18} />
+    <div className="flex min-h-screen flex-col bg-canvas">
+      {/* Top nav — no sidebar: one breadcrumb line and ⌘K. */}
+      <header className="sticky top-0 z-20 border-b border-border bg-canvas/90 backdrop-blur">
+        <div className="mx-auto flex max-w-6xl items-center gap-2 px-4 py-4 sm:px-6 lg:px-8">
+          <button onClick={() => navigate('/')} className="shrink-0">
+            <span className="font-serif text-xl lowercase tracking-tight text-ink">
+              woordflow
             </span>
-            <div className="leading-tight">
-              <div className="text-sm font-semibold text-ink">
-                {streak.current} day{streak.current === 1 ? '' : 's'}
-              </div>
-              <div className="text-[11px] text-subtle">
-                {streak.current > 0 ? 'Keep it going!' : 'Study to start a streak'}
-              </div>
+          </button>
+
+          <nav className="ml-2 hidden items-center gap-1 sm:flex">
+            {nav.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  cn(
+                    'rounded-full px-3 py-1.5 text-sm font-medium transition',
+                    isActive ? 'text-ink' : 'text-muted hover:text-ink',
+                  )
+                }
+              >
+                {item.label}
+              </NavLink>
+            ))}
+          </nav>
+
+          <div className="ml-auto flex items-center gap-2">
+            <div
+              className="hidden items-center gap-1.5 text-sm text-muted sm:flex"
+              title={streak.current > 0 ? 'Keep it going!' : 'Study to start a streak'}
+            >
+              <Icon.Flame size={15} className={streak.current > 0 ? 'text-warning' : ''} />
+              <span className="tabular-nums">{streak.current}</span>
             </div>
+            <button
+              onClick={() => setSearchOpen(true)}
+              className="flex items-center gap-2 rounded-full border border-border bg-surface px-3 py-1.5 text-sm text-subtle transition hover:text-ink"
+            >
+              <Icon.Search size={14} />
+              <span className="kbd">⌘K</span>
+            </button>
+            <ThemeToggle />
           </div>
-          <ThemeToggle />
         </div>
-      </aside>
 
-      {/* Mobile top bar */}
-      <div className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border bg-surface/80 px-4 py-2.5 backdrop-blur md:hidden">
-          <button onClick={() => navigate('/')} className="flex items-center gap-2">
-            <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-brand text-white">
-              <svg width="15" height="15" viewBox="0 0 32 32" fill="none">
-                <path d="M8 21 L13 11 L16 18 L19 11 L24 21" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </span>
-            <span className="font-semibold text-ink">WoordFlow</span>
-          </button>
-          <button
-            onClick={() => setSearchOpen(true)}
-            className="ml-auto rounded-lg p-1.5 text-muted"
-            aria-label="Search"
-          >
-            <Icon.Search size={18} />
-          </button>
-          <ThemeToggle />
-        </header>
-
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6 lg:px-8">
-          <Outlet />
-        </main>
-
-        {/* Mobile bottom nav */}
-        <nav className="sticky bottom-0 z-20 flex items-center justify-around border-t border-border bg-surface/90 py-1.5 backdrop-blur md:hidden">
+        {/* Mobile nav row */}
+        <nav className="flex items-center gap-1 overflow-x-auto border-t border-border px-4 py-2 sm:hidden">
           {nav.map((item) => (
             <NavLink
               key={item.to}
@@ -142,17 +93,21 @@ export function AppLayout() {
               end={item.end}
               className={({ isActive }) =>
                 cn(
-                  'flex flex-col items-center gap-0.5 rounded-lg px-4 py-1 text-[11px] font-medium',
-                  isActive ? 'text-brand' : 'text-subtle',
+                  'flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[13px] font-medium',
+                  isActive ? 'bg-ink text-canvas' : 'text-muted',
                 )
               }
             >
-              <item.icon size={19} />
+              <item.icon size={15} />
               {item.label}
             </NavLink>
           ))}
         </nav>
-      </div>
+      </header>
+
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 sm:px-6 lg:px-8">
+        <Outlet />
+      </main>
 
       <GlobalSearch open={searchOpen} onClose={() => setSearchOpen(false)} />
     </div>
