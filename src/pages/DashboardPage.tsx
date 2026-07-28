@@ -16,6 +16,7 @@ import { useToast } from '@/components/ui/Toast';
 import { languageAccent } from '@/lib/languageColor';
 import { pluralize } from '@/lib/format';
 import { useT } from '@/hooks/useT';
+import { cn } from '@/lib/cn';
 
 export function DashboardPage() {
   const { folders, lists, summaries, loading } = useLibrary();
@@ -26,21 +27,38 @@ export function DashboardPage() {
   const t = useT();
 
   const [selectedFolder, setSelectedFolder] = useState<string | null>(null);
+  const [selectedLanguage, setSelectedLanguage] = useState<string | null>(null);
   const [showNewList, setShowNewList] = useState(false);
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showFolders, setShowFolders] = useState(false);
 
+  // Every language present in the library, in a stable order — most lists
+  // first, since that's usually the language someone is actively learning.
+  const languages = useMemo(() => {
+    const counts = new Map<string, number>();
+    for (const l of lists) {
+      if (l.archived) continue;
+      counts.set(l.language, (counts.get(l.language) ?? 0) + 1);
+    }
+    return Array.from(counts.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(([lang]) => lang);
+  }, [lists]);
+
   const visibleLists = useMemo(() => {
     let ls = lists;
     if (selectedFolder) {
       const ids = descendantFolderIds(folders, selectedFolder);
-      ls = lists.filter((l) => l.folderId && ids.has(l.folderId));
+      ls = ls.filter((l) => l.folderId && ids.has(l.folderId));
+    }
+    if (selectedLanguage) {
+      ls = ls.filter((l) => l.language === selectedLanguage);
     }
     return ls
       .filter((l) => !l.archived)
       .sort((a, b) => (b.lastStudiedAt ?? 0) - (a.lastStudiedAt ?? 0) || a.order - b.order);
-  }, [lists, folders, selectedFolder]);
+  }, [lists, folders, selectedFolder, selectedLanguage]);
 
   // Lists are shown under a header per folder — with the curriculum installed a
   // flat list would be ~60 rows of undifferentiated text.
@@ -123,6 +141,33 @@ export function DashboardPage() {
         </div>
       </div>
 
+      {/* Language filter — the fastest way to jump straight to one language's
+          lists without wading through the folder tree. Only worth showing once
+          there's more than one language to choose between. */}
+      {languages.length > 1 && (
+        <div className="mb-4 flex flex-wrap items-center gap-1.5">
+          <LanguageChip
+            label="All languages"
+            active={selectedLanguage === null}
+            onClick={() => setSelectedLanguage(null)}
+          />
+          {languages.map((lang) => {
+            const accent = languageAccent(lang);
+            return (
+              <LanguageChip
+                key={lang}
+                label={lang}
+                dotColor={accent.hex}
+                active={selectedLanguage === lang}
+                onClick={() =>
+                  setSelectedLanguage((cur) => (cur === lang ? null : lang))
+                }
+              />
+            );
+          })}
+        </div>
+      )}
+
       {showFolders && (
         <div className="mb-6 rounded-2xl border border-border bg-surface p-2">
           <FolderTree
@@ -134,7 +179,7 @@ export function DashboardPage() {
         </div>
       )}
 
-      {/* Library table */}
+      {/* Library, grouped by folder */}
       {loading ? (
         <div className="space-y-3">
           {Array.from({ length: 4 }).map((_, i) => (
@@ -284,5 +329,34 @@ export function DashboardPage() {
         onDone={(_, id) => navigate(`/list/${id}`)}
       />
     </div>
+  );
+}
+
+function LanguageChip({
+  label,
+  dotColor,
+  active,
+  onClick,
+}: {
+  label: string;
+  dotColor?: string;
+  active: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        'flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-medium transition',
+        active
+          ? 'border-brand bg-brand/10 text-brand'
+          : 'border-border bg-surface text-muted hover:text-ink',
+      )}
+    >
+      {dotColor && (
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: dotColor }} />
+      )}
+      {label}
+    </button>
   );
 }
