@@ -5,14 +5,18 @@ export default {
   theme: {
     extend: {
       fontFamily: {
+        // "Tide (Mint)" re-theme: Nunito for body/UI, Outfit for headline
+        // moments. Kept under the existing `serif` key (not renamed) so no
+        // component classnames need to change — it's just mapped to a
+        // different display face now.
         sans: [
-          'DM Sans',
+          'Nunito',
           '-apple-system',
           'BlinkMacSystemFont',
           'Segoe UI',
           'sans-serif',
         ],
-        serif: ['Instrument Serif', 'Georgia', 'serif'],
+        serif: ['Outfit', '-apple-system', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
       colors: {
@@ -35,12 +39,13 @@ export default {
       },
       borderRadius: {
         xl: '0.875rem',
-        '2xl': '1.25rem',
-        '3xl': '1.5rem',
+        '2xl': '1.125rem',
+        '3xl': '1.625rem',
       },
       boxShadow: {
-        soft: '0 1px 2px rgba(27,26,22,0.04), 0 8px 24px -12px rgba(27,26,22,0.10)',
-        pop: '0 12px 40px -12px rgba(27,26,22,0.22)',
+        // Retinted to the deep-teal ink (#0d2d38) from the Tide palette.
+        soft: '0 1px 2px rgba(13,45,56,0.05), 0 10px 30px -24px rgba(13,45,56,0.3)',
+        pop: '0 20px 50px -22px rgba(13,45,56,0.3)',
       },
       keyframes: {
         'pop-in': {

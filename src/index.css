@@ -7,35 +7,36 @@
    works. Light + dark are defined here; components never hardcode a palette.
 --------------------------------------------------------------------------- */
 :root {
-  /* "Atlas — Minimal Luxury": paper & ink, with color used as filing, not decor. */
-  --c-canvas: 250 249 246; /* bone */
+  /* "Tide (Mint)": a calm lagoon palette — mist canvas, deep-teal ink, one clear accent. */
+  --c-canvas: 242 248 250; /* mist */
   --c-surface: 255 255 255; /* cards */
-  --c-elevated: 255 255 255; /* popovers/modals */
-  --c-border: 231 227 219;
-  --c-muted: 115 111 102; /* secondary text */
-  --c-subtle: 163 157 145; /* tertiary text */
-  --c-ink: 27 26 22; /* primary text */
-  --c-brand: 169 99 63; /* clay — default accent */
-  --c-brand-soft: 240 227 217;
-  --c-success: 91 122 79; /* olive */
-  --c-warning: 191 138 53;
-  --c-danger: 178 66 55;
+  --c-elevated: 238 246 248; /* popovers/modals, chips */
+  --c-border: 223 234 238;
+  --c-muted: 91 117 128; /* secondary text */
+  --c-subtle: 138 160 168; /* tertiary text */
+  --c-ink: 13 45 56; /* deep — primary text */
+  --c-brand: 15 109 140; /* lagoon — default accent */
+  --c-brand-soft: 223 243 236;
+  --c-success: 28 112 87; /* coral-green */
+  --c-warning: 176 138 62;
+  --c-danger: 200 52 28;
   color-scheme: light;
 }
 
 .dark {
-  --c-canvas: 20 19 16;
-  --c-surface: 29 28 24;
-  --c-elevated: 35 34 29;
-  --c-border: 54 52 44;
-  --c-muted: 168 162 150;
-  --c-subtle: 122 117 106;
-  --c-ink: 241 238 231;
-  --c-brand: 205 141 105;
-  --c-brand-soft: 61 44 34;
-  --c-success: 139 173 122;
-  --c-warning: 219 168 92;
-  --c-danger: 214 116 103;
+  /* Same lagoon language, inverted: deep-teal canvas, lifted mist-tinted surfaces. */
+  --c-canvas: 10 26 32;
+  --c-surface: 15 36 44;
+  --c-elevated: 20 44 53;
+  --c-border: 32 60 70;
+  --c-muted: 148 175 184;
+  --c-subtle: 100 129 140;
+  --c-ink: 232 244 246;
+  --c-brand: 63 163 196;
+  --c-brand-soft: 20 56 60;
+  --c-success: 90 191 157;
+  --c-warning: 214 168 92;
+  --c-danger: 224 108 84;
   color-scheme: dark;
 }
 
@@ -51,16 +52,17 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-/* Atlas typographic signature: serif for headline moments, sans for UI chrome,
-   mono for small uppercase labels/eyebrows. */
+/* Tide typographic signature: Outfit for headline moments, Nunito for UI chrome,
+   bold tracked-caps Nunito for small labels/eyebrows (mono is reserved for
+   hint reveals and raw-text input, not decorative labels). */
 h1 {
   font-family: theme('fontFamily.serif');
-  font-weight: 400;
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .eyebrow {
-  @apply font-mono text-[11px] uppercase tracking-widest text-subtle;
+  @apply font-sans text-[11px] font-extrabold uppercase tracking-widest text-subtle;
 }
 
 /* Respect users who prefer reduced motion — never let animation slow study. */
@@ -91,7 +93,7 @@ h1 {
 
 /* Utility: focus ring consistent across the app */
 .focus-ring {
-  @apply outline-none ring-2 ring-brand/60 ring-offset-2 ring-offset-canvas;
+  @apply outline-none ring-2 ring-brand/50 ring-offset-2 ring-offset-canvas;
 }
 
 /* Keyboard hint chips */
