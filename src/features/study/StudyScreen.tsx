@@ -27,32 +27,38 @@ export function StudyScreen(props: Props) {
   // Auto-focus the input whenever we're awaiting an answer, so the user can
   // always type the next answer immediately without clicking back into it.
   //
-  // This has to survive a real browser quirk: clicking "Continue" / "I was
-  // right" removes that button from the DOM as part of the same render that
-  // brings the (now-enabled) input back. When the focused element is
-  // removed, the browser resets focus to <body> — and it does this natively,
-  // outside of React, so it can land *after* our effect already called
-  // .focus(). A single synchronous focus() call in a useEffect loses that
-  // race. Retrying across a couple of animation frames wins it reliably
-  // without any user-visible delay.
+  // Two things fight us here:
+  //  1. The question card is wrapped in <AnimatePresence mode="wait">, keyed
+  //     by eng.index. On "wait", the outgoing card (and its input DOM node)
+  //     doesn't get replaced until its ~160ms exit animation finishes — so
+  //     inputRef.current can still be the OLD, about-to-be-removed node (or
+  //     briefly null) right when this effect first fires for the new index.
+  //  2. Clicking "Continue" / "I was right" removes that button from the DOM
+  //     as part of the same transition. When the focused element is removed,
+  //     the browser resets focus to <body> natively, outside of React —
+  //     which can happen after our first focus() call.
+  // A single focus() call, or even a couple of animation frames, isn't
+  // enough to outlast a 160ms exit transition. Poll for a window comfortably
+  // longer than that instead of guessing the exact timing.
   useEffect(() => {
     if (eng.phase !== 'prompt') return;
     let cancelled = false;
-    let raf1 = 0;
-    let raf2 = 0;
+    let attempts = 0;
+    const maxAttempts = 20; // ~20 frames ≈ 320ms, comfortably past the 160ms exit transition
     const tryFocus = () => {
       if (cancelled) return;
-      if (document.activeElement !== inputRef.current) inputRef.current?.focus();
+      if (document.activeElement !== inputRef.current) {
+        inputRef.current?.focus();
+      }
+      attempts += 1;
+      if (attempts < maxAttempts) {
+        rafId = requestAnimationFrame(tryFocus);
+      }
     };
-    tryFocus();
-    raf1 = requestAnimationFrame(() => {
-      tryFocus();
-      raf2 = requestAnimationFrame(tryFocus);
-    });
+    let rafId = requestAnimationFrame(tryFocus);
     return () => {
       cancelled = true;
-      cancelAnimationFrame(raf1);
-      cancelAnimationFrame(raf2);
+      cancelAnimationFrame(rafId);
     };
   }, [eng.phase, eng.index]);
 
