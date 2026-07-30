@@ -26,15 +26,42 @@ export function StudyScreen(props: Props) {
 
   // Auto-focus the input whenever we're awaiting an answer, so the user can
   // always type the next answer immediately without clicking back into it.
+  //
+  // This has to survive a real browser quirk: clicking "Continue" / "I was
+  // right" removes that button from the DOM as part of the same render that
+  // brings the (now-enabled) input back. When the focused element is
+  // removed, the browser resets focus to <body> — and it does this natively,
+  // outside of React, so it can land *after* our effect already called
+  // .focus(). A single synchronous focus() call in a useEffect loses that
+  // race. Retrying across a couple of animation frames wins it reliably
+  // without any user-visible delay.
   useEffect(() => {
-    if (eng.phase === 'prompt') inputRef.current?.focus();
+    if (eng.phase !== 'prompt') return;
+    let cancelled = false;
+    let raf1 = 0;
+    let raf2 = 0;
+    const tryFocus = () => {
+      if (cancelled) return;
+      if (document.activeElement !== inputRef.current) inputRef.current?.focus();
+    };
+    tryFocus();
+    raf1 = requestAnimationFrame(() => {
+      tryFocus();
+      raf2 = requestAnimationFrame(tryFocus);
+    });
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+      cancelAnimationFrame(raf2);
+    };
   }, [eng.phase, eng.index]);
 
   // Belt-and-braces: if focus ever drifts away from the input while we're
   // still awaiting an answer (stray click on the page background, window
   // regaining focus, etc.), pull it straight back. Skips clicks on buttons/
   // links inside the study screen (hint, skip, exit, continue, "I was
-  // right") so those stay clickable.
+  // right") so those stay clickable — the effect above already handles
+  // refocusing after those.
   useEffect(() => {
     if (eng.phase !== 'prompt') return;
     const refocus = (e?: Event) => {
@@ -44,7 +71,6 @@ export function StudyScreen(props: Props) {
       }
       if (document.activeElement !== inputRef.current) inputRef.current?.focus();
     };
-    refocus();
     document.addEventListener('click', refocus);
     window.addEventListener('focus', refocus);
     return () => {
