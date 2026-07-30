@@ -19,6 +19,12 @@ interface Props {
   onQuit: () => void;
 }
 
+// Bold, unambiguous stoplight colors for the answer feedback text specifically
+// (deliberately more saturated than the app's muted success/danger tokens,
+// which stay as-is for buttons/badges elsewhere).
+const BRIGHT_RED = '#dc2626';
+const BRIGHT_GREEN = '#16a34a';
+
 export function StudyScreen(props: Props) {
   const eng = useStudyEngine(props);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -32,24 +38,45 @@ export function StudyScreen(props: Props) {
   // mounted until the outgoing card's exit animation finishes — and that can
   // take anywhere from ~160ms to well over a second depending on how busy the
   // browser/tab is. There's no fixed delay or frame count that's reliably
-  // "long enough". So instead of guessing a timeout, keep retrying on every
-  // animation frame for as long as we're actually in the 'prompt' phase —
-  // the moment the input exists, isn't disabled, and grabs focus, this either
-  // settles (see below) or the phase changes and the effect's cleanup stops
-  // the loop. There is no legitimate reason for anything else to hold focus
-  // while a question is active, so this never fights the user.
+  // "long enough", so we keep retrying with no timeout... but calling
+  // .focus() every single animation frame forever (even once already
+  // focused) fights Framer Motion's own rAF-driven enter animation and can
+  // stall it mid-fade. So: poll every frame only until focus is achieved and
+  // holds for two consecutive frames, then stop — and re-arm the loop if
+  // focus is ever lost again (e.g. a later "Continue" click) via the phase/
+  // index deps below plus a blur listener while parked.
   useEffect(() => {
     if (eng.phase !== 'prompt') return;
     let rafId = 0;
+    let stableFrames = 0;
     const tryFocus = () => {
       const el = inputRef.current;
-      if (el && !el.disabled && document.activeElement !== el) {
-        el.focus();
+      const isFocused = !!el && document.activeElement === el;
+      if (isFocused) {
+        stableFrames += 1;
+        if (stableFrames >= 2) return; // settled — stop polling, no reason to keep going
+      } else {
+        stableFrames = 0;
+        if (el && !el.disabled) el.focus();
       }
       rafId = requestAnimationFrame(tryFocus);
     };
     rafId = requestAnimationFrame(tryFocus);
-    return () => cancelAnimationFrame(rafId);
+
+    // If focus is lost again after settling (e.g. clicking a button that
+    // gets removed from the DOM), restart the same polling loop.
+    const onBlur = () => {
+      cancelAnimationFrame(rafId);
+      stableFrames = 0;
+      rafId = requestAnimationFrame(tryFocus);
+    };
+    inputRef.current?.addEventListener('blur', onBlur);
+    const el = inputRef.current;
+
+    return () => {
+      cancelAnimationFrame(rafId);
+      el?.removeEventListener('blur', onBlur);
+    };
   }, [eng.phase, eng.index]);
 
   const finish = async () => {
@@ -283,7 +310,11 @@ function FeedbackArea({
             className="mt-3 text-center"
           >
             <div className="text-sm font-medium text-success">Correct</div>
-            <div className="font-serif text-xl text-ink" dir="auto">
+            <div
+              className="font-serif text-2xl font-semibold"
+              style={{ color: BRIGHT_GREEN }}
+              dir="auto"
+            >
               {eng.current.expected}
             </div>
             {eng.current.notes && (
@@ -293,64 +324,65 @@ function FeedbackArea({
         )}
       </AnimatePresence>
 
-      {/* Wrong or near-miss: show the spelling, offer a self-override. */}
+      {/* Wrong or near-miss: same layout as the correct case above — a short
+          label, then the answer text in bold color (red for what the learner
+          typed, green for the correct spelling) — plus the self-approval
+          buttons underneath. */}
       <AnimatePresence>
         {showVerdict && eng.current && (
           <motion.div
-            initial={{ opacity: 0, height: 0 }}
-            animate={{ opacity: 1, height: 'auto' }}
-            exit={{ opacity: 0, height: 0 }}
-            className="overflow-hidden"
+            initial={{ opacity: 0, y: -4 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="mt-3 text-center"
           >
-            <div className="mt-4 rounded-2xl border border-border bg-elevated p-4">
-              <div
-                className={cn(
-                  'mb-2 text-sm font-medium',
-                  isAlmost ? 'text-warning' : 'text-danger',
-                )}
-              >
-                {isAlmost ? 'Very close' : 'Not quite'}
-              </div>
-              <div className="flex flex-col gap-2 text-sm">
-                <Row label="Your answer">
-                  <span
-                    className={isAlmost ? 'text-warning' : 'text-danger'}
-                    dir="auto"
-                  >
-                    {eng.input.trim() || '— nothing typed —'}
-                  </span>
-                </Row>
-                <Row label="Correct answer">
-                  <span className="font-medium text-ink" dir="auto">
-                    <DiffText given={eng.input} expected={eng.current.expected} />
-                  </span>
-                </Row>
-                {eng.current.notes && (
-                  <Row label="Note">
-                    <span className="text-muted">{eng.current.notes}</span>
-                  </Row>
-                )}
-              </div>
-
-              <div className="mt-4 flex flex-col gap-2 sm:flex-row">
-                <button
-                  onClick={eng.continueNext}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-medium text-canvas transition hover:brightness-125"
-                >
-                  Continue <span className="kbd bg-white/20 text-canvas">Enter</span>
-                </button>
-                <button
-                  onClick={eng.markCorrect}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-success/50 px-4 py-2.5 text-sm font-medium text-success transition hover:bg-success/10"
-                >
-                  <Icon.Check size={16} /> I was right{' '}
-                  <span className="kbd">Y</span>
-                </button>
-              </div>
-              <p className="mt-2 text-center text-xs text-subtle">
-                Continuing asks this word once more at the end of the session.
-              </p>
+            <div
+              className={cn(
+                'text-sm font-medium',
+                isAlmost ? 'text-warning' : 'text-danger',
+              )}
+            >
+              {isAlmost ? 'Very close' : 'Not quite'}
             </div>
+
+            <div
+              className="font-serif text-2xl font-semibold"
+              style={{ color: BRIGHT_RED }}
+              dir="auto"
+            >
+              {eng.input.trim() || '— nothing typed —'}
+            </div>
+
+            <div
+              className="mt-1 font-serif text-2xl font-semibold"
+              style={{ color: BRIGHT_GREEN }}
+              dir="auto"
+            >
+              <DiffText given={eng.input} expected={eng.current.expected} />
+            </div>
+
+            {eng.current.notes && (
+              <div className="mt-1 text-xs text-muted">{eng.current.notes}</div>
+            )}
+
+            <div className="mx-auto mt-4 flex max-w-xs flex-col gap-2 sm:flex-row">
+              <button
+                onClick={eng.continueNext}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-medium text-canvas transition hover:brightness-125"
+              >
+                Continue <span className="kbd bg-white/20 text-canvas">Enter</span>
+              </button>
+              <button
+                onClick={eng.markCorrect}
+                className="flex flex-1 items-center justify-center gap-2 rounded-xl border border-success/50 px-4 py-2.5 text-sm font-medium text-success transition hover:bg-success/10"
+              >
+                <Icon.Check size={16} /> I was right{' '}
+                <span className="kbd">Y</span>
+              </button>
+            </div>
+            <p className="mt-2 text-center text-xs text-subtle">
+              Continuing asks this word again later in the session.
+            </p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -363,20 +395,11 @@ function DiffText({ given, expected }: { given: string; expected: string }) {
   return (
     <>
       {parts.map((p, i) => (
-        <span key={i} className={p.ok ? '' : 'text-danger underline decoration-danger/60'}>
+        <span key={i} className={p.ok ? '' : 'underline decoration-2 underline-offset-2'}>
           {p.char}
         </span>
       ))}
     </>
-  );
-}
-
-function Row({ label, children }: { label: string; children: React.ReactNode }) {
-  return (
-    <div className="flex items-baseline gap-3">
-      <span className="eyebrow w-28 shrink-0">{label}</span>
-      <span className="min-w-0 break-words font-serif text-lg">{children}</span>
-    </div>
   );
 }
 

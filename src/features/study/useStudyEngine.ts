@@ -156,12 +156,11 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
    */
   const pendingItem = useRef<SessionItem | null>(null);
 
-  /**
-   * Word ids already sent back once for being answered wrongly. A wrong answer
-   * earns exactly one repeat, so a word the learner keeps missing cannot trap
-   * them in an endless loop. Skips are unbounded — see `skip()`.
-   */
-  const repeatedAfterWrong = useRef<Set<string>>(new Set());
+  // Every wrong answer requeues the word again — there is no cap. A word the
+  // learner keeps missing keeps coming back, including on the very last
+  // question of the session, until it's finally answered correctly (or the
+  // learner overrides the grader with "I was right"). Skips are likewise
+  // unbounded — see `skip()`.
 
   const [state, setState] = useState<EngineState>(() => ({
     phase: initialQueue.length ? 'prompt' : 'done',
@@ -325,17 +324,17 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
     }));
   }, [autoAdvanceMs, buildItem, commitItem, proceedAfterAnswer]);
 
-  /** Accept the verdict, queue the word for the repeat round, and move on. */
+  /** Accept the verdict, requeue the word so it comes round again, and move on. */
   const continueNext = useCallback(() => {
     const s = stateRef.current;
     if (s.phase !== 'incorrect' && s.phase !== 'almost') return;
     const item = pendingItem.current;
     if (item) {
       commitItem(item);
-      if (s.current && !repeatedAfterWrong.current.has(item.wordId)) {
-        repeatedAfterWrong.current.add(item.wordId);
-        requeue(s.current);
-      }
+      // No cap: every miss — including a repeat of a word already retried —
+      // sends it to the back of the queue again, so a word can never fall out
+      // of the session unanswered correctly.
+      if (s.current) requeue(s.current);
     }
     proceedAfterAnswer();
   }, [commitItem, proceedAfterAnswer, requeue]);
