@@ -24,34 +24,10 @@ export function StudyScreen(props: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const finishing = useRef(false);
 
-  // Auto-focus the input whenever we're awaiting an answer, so the user can
-  // always type the next answer immediately without clicking back into it.
+  // Auto-focus the input whenever we're awaiting an answer.
   useEffect(() => {
     if (eng.phase === 'prompt') inputRef.current?.focus();
   }, [eng.phase, eng.index]);
-
-  // Belt-and-braces: if focus ever drifts away from the input while we're
-  // still awaiting an answer (stray click on the page background, window
-  // regaining focus, etc.), pull it straight back. Skips clicks on buttons/
-  // links inside the study screen (hint, skip, exit, continue, "I was
-  // right") so those stay clickable.
-  useEffect(() => {
-    if (eng.phase !== 'prompt') return;
-    const refocus = (e?: Event) => {
-      if (e) {
-        const target = e.target as HTMLElement | null;
-        if (target?.closest('button, a, [role="button"]')) return;
-      }
-      if (document.activeElement !== inputRef.current) inputRef.current?.focus();
-    };
-    refocus();
-    document.addEventListener('click', refocus);
-    window.addEventListener('focus', refocus);
-    return () => {
-      document.removeEventListener('click', refocus);
-      window.removeEventListener('focus', refocus);
-    };
-  }, [eng.phase]);
 
   const finish = async () => {
     if (finishing.current) return;
