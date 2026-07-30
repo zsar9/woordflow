@@ -27,63 +27,30 @@ export function StudyScreen(props: Props) {
   // Auto-focus the input whenever we're awaiting an answer, so the user can
   // always type the next answer immediately without clicking back into it.
   //
-  // Two things fight us here:
-  //  1. The question card is wrapped in <AnimatePresence mode="wait">, keyed
-  //     by eng.index. On "wait", the outgoing card (and its input DOM node)
-  //     doesn't get replaced until its ~160ms exit animation finishes — so
-  //     inputRef.current can still be the OLD, about-to-be-removed node (or
-  //     briefly null) right when this effect first fires for the new index.
-  //  2. Clicking "Continue" / "I was right" removes that button from the DOM
-  //     as part of the same transition. When the focused element is removed,
-  //     the browser resets focus to <body> natively, outside of React —
-  //     which can happen after our first focus() call.
-  // A single focus() call, or even a couple of animation frames, isn't
-  // enough to outlast a 160ms exit transition. Poll for a window comfortably
-  // longer than that instead of guessing the exact timing.
+  // This fights real, variable-timing browser behavior: the question card is
+  // wrapped in <AnimatePresence mode="wait">, so the new input DOM node isn't
+  // mounted until the outgoing card's exit animation finishes — and that can
+  // take anywhere from ~160ms to well over a second depending on how busy the
+  // browser/tab is. There's no fixed delay or frame count that's reliably
+  // "long enough". So instead of guessing a timeout, keep retrying on every
+  // animation frame for as long as we're actually in the 'prompt' phase —
+  // the moment the input exists, isn't disabled, and grabs focus, this either
+  // settles (see below) or the phase changes and the effect's cleanup stops
+  // the loop. There is no legitimate reason for anything else to hold focus
+  // while a question is active, so this never fights the user.
   useEffect(() => {
     if (eng.phase !== 'prompt') return;
-    let cancelled = false;
-    let attempts = 0;
-    const maxAttempts = 20; // ~20 frames ≈ 320ms, comfortably past the 160ms exit transition
+    let rafId = 0;
     const tryFocus = () => {
-      if (cancelled) return;
-      if (document.activeElement !== inputRef.current) {
-        inputRef.current?.focus();
+      const el = inputRef.current;
+      if (el && !el.disabled && document.activeElement !== el) {
+        el.focus();
       }
-      attempts += 1;
-      if (attempts < maxAttempts) {
-        rafId = requestAnimationFrame(tryFocus);
-      }
+      rafId = requestAnimationFrame(tryFocus);
     };
-    let rafId = requestAnimationFrame(tryFocus);
-    return () => {
-      cancelled = true;
-      cancelAnimationFrame(rafId);
-    };
+    rafId = requestAnimationFrame(tryFocus);
+    return () => cancelAnimationFrame(rafId);
   }, [eng.phase, eng.index]);
-
-  // Belt-and-braces: if focus ever drifts away from the input while we're
-  // still awaiting an answer (stray click on the page background, window
-  // regaining focus, etc.), pull it straight back. Skips clicks on buttons/
-  // links inside the study screen (hint, skip, exit, continue, "I was
-  // right") so those stay clickable — the effect above already handles
-  // refocusing after those.
-  useEffect(() => {
-    if (eng.phase !== 'prompt') return;
-    const refocus = (e?: Event) => {
-      if (e) {
-        const target = e.target as HTMLElement | null;
-        if (target?.closest('button, a, [role="button"]')) return;
-      }
-      if (document.activeElement !== inputRef.current) inputRef.current?.focus();
-    };
-    document.addEventListener('click', refocus);
-    window.addEventListener('focus', refocus);
-    return () => {
-      document.removeEventListener('click', refocus);
-      window.removeEventListener('focus', refocus);
-    };
-  }, [eng.phase]);
 
   const finish = async () => {
     if (finishing.current) return;
