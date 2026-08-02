@@ -44,6 +44,7 @@ export interface StudyEngine extends EngineState {
   submit: () => void;
   continueNext: () => void; // Space/Enter after a wrong answer
   markCorrect: () => void; // "I was right" — learner overrides the grader
+  skipDwell: () => void; // Enter again during the post-correct pause — advance now
   useHint: () => void;
   skip: () => void;
   exit: () => Promise<StudySession>; // persist & return the session
@@ -66,7 +67,11 @@ interface InitArgs {
  */
 const GRADE_CONFIG = { forgiveness: 'balanced' as const, enableFuzzy: true };
 
-/** How long a correct answer stays on screen so the spelling can be read. */
+/**
+ * How long a correct answer stays on screen so the spelling can be read,
+ * before auto-advancing. A learner in a hurry doesn't have to wait this out —
+ * see `skipDwell`, wired to pressing Enter again during this pause.
+ */
 const MIN_CORRECT_DWELL_MS = 900;
 
 export function computeSummary(
@@ -349,6 +354,18 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
     proceedAfterAnswer();
   }, [commitItem, proceedAfterAnswer]);
 
+  /**
+   * A learner going through the list quickly can press Enter a second time
+   * during the brief "Correct" pause to jump straight to the next word,
+   * instead of waiting out the full dwell time.
+   */
+  const skipDwell = useCallback(() => {
+    const s = stateRef.current;
+    if (s.phase !== 'correct') return;
+    clearTimer();
+    proceedAfterAnswer();
+  }, [proceedAfterAnswer]);
+
   const useHint = useCallback(() => {
     setState((s) => {
       if (s.phase !== 'prompt' || !s.current) return s;
@@ -431,6 +448,7 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
     submit,
     continueNext,
     markCorrect,
+    skipDwell,
     useHint,
     skip,
     exit,

@@ -7,6 +7,7 @@ import { useHotkeys } from '@/hooks/useHotkeys';
 import { Icon } from '@/components/ui/Icon';
 import { cn } from '@/lib/cn';
 import { diffChars } from '@/lib/validation';
+import { playCorrectSound, playIncorrectSound } from '@/lib/sound';
 
 interface Props {
   words: Word[];
@@ -79,6 +80,18 @@ export function StudyScreen(props: Props) {
     };
   }, [eng.phase, eng.index]);
 
+  // Play a short ping / buzz the instant an answer is graded. Keyed off
+  // eng.phase + eng.index so it fires exactly once per verdict (not on every
+  // re-render), and skips the very first mount (index 0, phase 'prompt').
+  const lastSoundKey = useRef<string | null>(null);
+  useEffect(() => {
+    const key = `${eng.index}:${eng.phase}`;
+    if (lastSoundKey.current === key) return;
+    lastSoundKey.current = key;
+    if (eng.phase === 'correct') playCorrectSound();
+    else if (eng.phase === 'incorrect' || eng.phase === 'almost') playIncorrectSound();
+  }, [eng.phase, eng.index]);
+
   const finish = async () => {
     if (finishing.current) return;
     finishing.current = true;
@@ -100,6 +113,10 @@ export function StudyScreen(props: Props) {
       e.preventDefault();
       if (eng.phase === 'prompt') eng.submit();
       else if (awaitingVerdict) eng.continueNext();
+      // A second Enter press during the brief post-correct pause skips the
+      // wait and jumps straight to the next word — lets a fast learner
+      // move at their own pace instead of waiting out the fixed dwell time.
+      else if (eng.phase === 'correct') eng.skipDwell();
     },
     ' ': (e) => {
       if (awaitingVerdict) {
@@ -244,7 +261,12 @@ function FeedbackArea({
         className={cn(
           'flex items-center gap-2 border-b-2 bg-transparent px-1 py-3 transition',
           borderTone,
+          // Nudge the field left-right the instant a wrong/near-miss verdict
+          // lands. Keyed by eng.index so it re-triggers on every subsequent
+          // wrong answer, not just the first.
+          isIncorrect && 'animate-shake-x',
         )}
+        key={isIncorrect ? `shake-${eng.index}` : undefined}
       >
         <input
           ref={inputRef}
@@ -421,6 +443,7 @@ function ShortcutBar({ phase }: { phase: string }) {
           <Hint k="Esc" label="Exit" />
         </>
       )}
+      {phase === 'correct' && <Hint k="Enter" label="Skip ahead" />}
     </div>
   );
 }

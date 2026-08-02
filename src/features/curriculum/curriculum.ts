@@ -67,6 +67,46 @@ function vocabularyStages(lang: string): CurriculumStage[] {
       from: 16,
       to: 20,
     },
+    {
+      key: `${lang}.vocab.stage5`,
+      title: 'Vocabulary V · Emotional & Social Life',
+      level: 'B1',
+      blurb:
+        'Feelings, personality, relationships, sports, the arts and food culture — ' +
+        'the vocabulary of a full social life.',
+      from: 21,
+      to: 25,
+    },
+    {
+      key: `${lang}.vocab.stage6`,
+      title: 'Vocabulary VI · Society & the Wider World',
+      level: 'B1–B2',
+      blurb:
+        'Money and banking, news and media, the environment, government and law, ' +
+        'and higher education — the vocabulary of an informed adult.',
+      from: 26,
+      to: 30,
+    },
+    {
+      key: `${lang}.vocab.stage7`,
+      title: 'Vocabulary VII · Precision & Nuance',
+      level: 'B2',
+      blurb:
+        'Reflexive verbs, idioms, sharper debate vocabulary, home DIY and ' +
+        'bureaucracy — the words that separate fluent from merely correct.',
+      from: 31,
+      to: 35,
+    },
+    {
+      key: `${lang}.vocab.stage8`,
+      title: 'Vocabulary VIII · Fluency & Range',
+      level: 'B2',
+      blurb:
+        'Advanced science, medicine, digital life, career vocabulary and the last ' +
+        'high-frequency B2 gaps — the final stretch toward real fluency.',
+      from: 36,
+      to: 40,
+    },
   ];
 }
 

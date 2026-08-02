@@ -52,9 +52,17 @@ export default {
           '0%': { transform: 'scale(0.96)', opacity: '0' },
           '100%': { transform: 'scale(1)', opacity: '1' },
         },
+        'shake-x': {
+          '0%, 100%': { transform: 'translateX(0)' },
+          '20%': { transform: 'translateX(-8px)' },
+          '40%': { transform: 'translateX(7px)' },
+          '60%': { transform: 'translateX(-5px)' },
+          '80%': { transform: 'translateX(3px)' },
+        },
       },
       animation: {
         'pop-in': 'pop-in 0.14s ease-out',
+        'shake-x': 'shake-x 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97) both',
       },
     },
   },
