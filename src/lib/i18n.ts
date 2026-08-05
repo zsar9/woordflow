@@ -35,6 +35,13 @@ const STRINGS: Record<string, { en: string; nl: string }> = {
   'dashboard.col.lastStudied': { en: 'Last studied', nl: 'Laatst geoefend' },
   'dashboard.empty.title': { en: 'No lists here yet', nl: 'Nog geen lijsten hier' },
   'dashboard.empty.desc': { en: 'Create a list or import words from CSV, Excel, or a paste.', nl: 'Maak een lijst of importeer woorden uit CSV, Excel of geplakte tekst.' },
+  'dashboard.search.placeholder': { en: 'Search your lists…', nl: 'Zoek in je lijsten…' },
+  'dashboard.allLevels': { en: 'All levels', nl: 'Alle niveaus' },
+  'dashboard.onlyDue': { en: 'Only due', nl: 'Alleen te doen' },
+  'dashboard.expandAll': { en: 'Expand all', nl: 'Alles uitklappen' },
+  'dashboard.collapseAll': { en: 'Collapse all', nl: 'Alles inklappen' },
+  'dashboard.noMatches': { en: 'No lists match your filters.', nl: 'Geen lijsten voldoen aan je filters.' },
+  'dashboard.clearFilters': { en: 'Clear filters', nl: 'Filters wissen' },
 
   // Stories
   'stories.title': { en: 'Stories', nl: 'Verhalen' },

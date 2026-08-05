@@ -107,6 +107,16 @@ function vocabularyStages(lang: string): CurriculumStage[] {
       from: 36,
       to: 40,
     },
+    {
+      key: `${lang}.vocab.stageUsRoadtrip`,
+      title: 'US Roadtrip · Words',
+      level: 'Practical',
+      blurb:
+        'Ten themed packs of practical vocabulary for a road trip across the ' +
+        'United States — gas stations, diners, motels, breakdowns, parks and more.',
+      from: 41,
+      to: 50,
+    },
   ];
 }
 
@@ -142,6 +152,16 @@ function sentenceStages(lang: string): CurriculumStage[] {
         'with each other.',
       from: 8,
       to: 10,
+    },
+    {
+      key: `${lang}.sent.stageUsRoadtrip`,
+      title: 'US Roadtrip · Sentences',
+      level: 'Practical',
+      blurb:
+        'Ten themed packs of complete, natural sentences for a road trip across ' +
+        'the United States — gas stations, diners, motels, breakdowns, parks and more.',
+      from: 11,
+      to: 20,
     },
   ];
 }

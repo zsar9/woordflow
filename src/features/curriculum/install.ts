@@ -20,7 +20,7 @@ import type { Folder, StudyList } from '@/types';
 import { CURRICULA } from './curriculum';
 import type { CurriculumList, LanguageCurriculum } from './types';
 
-export const CURRICULUM_VERSION = 2;
+export const CURRICULUM_VERSION = 3;
 
 const VERSION_KEY = 'woordflow.curriculum.version';
 const ROOT_KEY = 'curriculum';
