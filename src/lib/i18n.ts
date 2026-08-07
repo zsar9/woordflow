@@ -42,6 +42,8 @@ const STRINGS: Record<string, { en: string; nl: string }> = {
   'dashboard.collapseAll': { en: 'Collapse all', nl: 'Alles inklappen' },
   'dashboard.noMatches': { en: 'No lists match your filters.', nl: 'Geen lijsten voldoen aan je filters.' },
   'dashboard.clearFilters': { en: 'Clear filters', nl: 'Filters wissen' },
+  'dashboard.filters': { en: 'Filters', nl: 'Filters' },
+  'dashboard.browseFolders': { en: 'Browse folders', nl: 'Blader door mappen' },
 
   // Stories
   'stories.title': { en: 'Stories', nl: 'Verhalen' },
