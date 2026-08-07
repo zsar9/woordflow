@@ -74,6 +74,14 @@ const GRADE_CONFIG = { forgiveness: 'balanced' as const, enableFuzzy: true };
  */
 const MIN_CORRECT_DWELL_MS = 900;
 
+/**
+ * How many other questions come before a missed word is asked again. Small
+ * and deliberate: reinforcing a mistake a few questions later — while it's
+ * still fresh — teaches it faster than waiting until every other word in the
+ * list has been asked first.
+ */
+const REQUEUE_DELAY = 3;
+
 export function computeSummary(
   items: SessionItem[],
   startedAt: number,
@@ -161,11 +169,12 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
    */
   const pendingItem = useRef<SessionItem | null>(null);
 
-  // Every wrong answer requeues the word again — there is no cap. A word the
-  // learner keeps missing keeps coming back, including on the very last
-  // question of the session, until it's finally answered correctly (or the
-  // learner overrides the grader with "I was right"). Skips are likewise
-  // unbounded — see `skip()`.
+  // Every wrong answer requeues the word a few questions ahead (see
+  // `REQUEUE_DELAY`) rather than at the very back — there is no cap on how
+  // many times this can happen. A word the learner keeps missing keeps coming
+  // back soon after each miss, until it's finally answered correctly (or the
+  // learner overrides the grader with "I was right"). Skips are handled
+  // differently: they go to the very back, unbounded — see `skip()`.
 
   const [state, setState] = useState<EngineState>(() => ({
     phase: initialQueue.length ? 'prompt' : 'done',
@@ -223,8 +232,24 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
     [],
   );
 
-  /** Send a word to the very back of the session so it comes round again. */
-  const requeue = useCallback((q: Question) => {
+  /**
+   * Insert a missed word a few questions ahead (see `REQUEUE_DELAY`) instead
+   * of at the very end, so it comes back around while it's still fresh.
+   */
+  const requeueSoon = useCallback((q: Question) => {
+    const insertAt = Math.min(
+      queueRef.current.length,
+      stateRef.current.index + 1 + REQUEUE_DELAY,
+    );
+    queueRef.current.splice(insertAt, 0, buildQuestion(q.word, q.direction));
+  }, []);
+
+  /**
+   * Send a word to the very back of the session. Used for "ask me later"
+   * skips, which are an explicit deferral rather than a mistake to reinforce
+   * quickly.
+   */
+  const requeueAtEnd = useCallback((q: Question) => {
     queueRef.current.push(buildQuestion(q.word, q.direction));
   }, []);
 
@@ -337,12 +362,13 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
     if (item) {
       commitItem(item);
       // No cap: every miss — including a repeat of a word already retried —
-      // sends it to the back of the queue again, so a word can never fall out
-      // of the session unanswered correctly.
-      if (s.current) requeue(s.current);
+      // is requeued a few questions ahead (not sent to the very back), so a
+      // missed word gets reinforced while it's still fresh and can never fall
+      // out of the session unanswered correctly.
+      if (s.current) requeueSoon(s.current);
     }
     proceedAfterAnswer();
-  }, [commitItem, proceedAfterAnswer, requeue]);
+  }, [commitItem, proceedAfterAnswer, requeueSoon]);
 
   /** The learner overrides the grader: count this answer as correct. */
   const markCorrect = useCallback(() => {
@@ -388,9 +414,9 @@ export function useStudyEngine(args: InitArgs): StudyEngine {
     const s = stateRef.current;
     if (s.phase !== 'prompt' || !s.current) return;
     commitItem(buildItem('skipped', s.input.trim()));
-    requeue(s.current);
+    requeueAtEnd(s.current);
     proceedAfterAnswer();
-  }, [buildItem, commitItem, proceedAfterAnswer, requeue]);
+  }, [buildItem, commitItem, proceedAfterAnswer, requeueAtEnd]);
 
   const exit = useCallback(async (): Promise<StudySession> => {
     clearTimer();
