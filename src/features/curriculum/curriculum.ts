@@ -24,6 +24,7 @@ import { SPANISH_SENTENCES } from './data/spanishSentences';
 import { DARIJA_VOCABULARY } from './data/darijaVocabulary';
 import { DARIJA_SENTENCES } from './data/darijaSentences';
 import { DARIJA_VERBS, DARIJA_CONJUGATIONS } from './data/darijaVerbs';
+import { DARIJA_VERBS_100 } from './data/darijaVerbs100';
 
 /** The four vocabulary stages, parameterised by language key. */
 function vocabularyStages(lang: string): CurriculumStage[] {
@@ -203,6 +204,26 @@ function conjugationStages(lang: string): CurriculumStage[] {
   ];
 }
 
+/**
+ * The 100 essential basic verbs, as one dedicated stage spanning all four
+ * 25-verb lists — Darija only.
+ */
+function basicVerbs100Stages(lang: string): CurriculumStage[] {
+  return [
+    {
+      key: `${lang}.verbs100.stage1`,
+      title: '100 Basic Verbs',
+      level: 'A1–A2',
+      blurb:
+        'The 100 verbs that cover the overwhelming majority of what you need ' +
+        'to say in basic Darija, gathered into one place and split into four ' +
+        '25-verb lists.',
+      from: 1,
+      to: 4,
+    },
+  ];
+}
+
 export const SPANISH_CURRICULUM: LanguageCurriculum = {
   key: 'spanish',
   language: 'Spanish',
@@ -259,6 +280,12 @@ export const DARIJA_CURRICULUM: LanguageCurriculum = {
       category: 'conjugations',
       stages: conjugationStages('darija'),
       lists: DARIJA_CONJUGATIONS,
+    },
+    {
+      kind: 'verbs',
+      category: 'verbs',
+      stages: basicVerbs100Stages('darija'),
+      lists: DARIJA_VERBS_100,
     },
   ],
 };

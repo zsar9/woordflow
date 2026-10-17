@@ -28,3 +28,4 @@ pnpm-debug.log*
 # vite / ts
 *.tsbuildinfo
 .vercel
+.env*
