@@ -57,7 +57,7 @@ export interface CurriculumStage {
 
 /** One track (vocabulary or sentences) of a language's curriculum. */
 export interface CurriculumTrack {
-  kind: 'vocabulary' | 'sentences';
+  kind: 'vocabulary' | 'sentences' | 'verbs' | 'conjugations';
   category: WordCategory;
   stages: CurriculumStage[];
   lists: CurriculumList[];

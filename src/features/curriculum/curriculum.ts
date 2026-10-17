@@ -23,6 +23,7 @@ import { SPANISH_VOCABULARY } from './data/spanishVocabulary';
 import { SPANISH_SENTENCES } from './data/spanishSentences';
 import { DARIJA_VOCABULARY } from './data/darijaVocabulary';
 import { DARIJA_SENTENCES } from './data/darijaSentences';
+import { DARIJA_VERBS, DARIJA_CONJUGATIONS } from './data/darijaVerbs';
 
 /** The four vocabulary stages, parameterised by language key. */
 function vocabularyStages(lang: string): CurriculumStage[] {
@@ -166,6 +167,42 @@ function sentenceStages(lang: string): CurriculumStage[] {
   ];
 }
 
+/**
+ * The verb/conjugation stages — Darija only. A short, standalone pair of
+ * lists: a second wave of bare verbs, then a dedicated present-tense
+ * conjugation drill, so conjugated forms are their own quizzable entries
+ * rather than only appearing inside other words' usage notes.
+ */
+function verbStages(lang: string): CurriculumStage[] {
+  return [
+    {
+      key: `${lang}.verbs.stage1`,
+      title: 'Verbs · More Everyday Verbs',
+      level: 'A2',
+      blurb:
+        'A second wave of high-frequency bare verbs that did not fit in the ' +
+        'original Everyday Verbs list.',
+      from: 1,
+      to: 1,
+    },
+  ];
+}
+
+function conjugationStages(lang: string): CurriculumStage[] {
+  return [
+    {
+      key: `${lang}.conj.stage1`,
+      title: 'Conjugation Drill · Present Tense',
+      level: 'A2',
+      blurb:
+        'Present-tense conjugations of verbs you already know, spelled out ' +
+        'across ana, nta, howa and 7na as their own quizzable entries.',
+      from: 1,
+      to: 1,
+    },
+  ];
+}
+
 export const SPANISH_CURRICULUM: LanguageCurriculum = {
   key: 'spanish',
   language: 'Spanish',
@@ -210,6 +247,18 @@ export const DARIJA_CURRICULUM: LanguageCurriculum = {
       category: 'sentences',
       stages: sentenceStages('darija'),
       lists: DARIJA_SENTENCES,
+    },
+    {
+      kind: 'verbs',
+      category: 'verbs',
+      stages: verbStages('darija'),
+      lists: DARIJA_VERBS,
+    },
+    {
+      kind: 'conjugations',
+      category: 'conjugations',
+      stages: conjugationStages('darija'),
+      lists: DARIJA_CONJUGATIONS,
     },
   ],
 };

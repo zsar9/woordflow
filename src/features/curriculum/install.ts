@@ -20,7 +20,7 @@ import type { Folder, StudyList } from '@/types';
 import { CURRICULA } from './curriculum';
 import type { CurriculumList, LanguageCurriculum } from './types';
 
-export const CURRICULUM_VERSION = 3;
+export const CURRICULUM_VERSION = 4;
 
 const VERSION_KEY = 'woordflow.curriculum.version';
 const ROOT_KEY = 'curriculum';
@@ -126,7 +126,13 @@ async function runInstall(): Promise<InstallResult> {
           stage.title,
           langFolder.id,
           ROOT_ORDER + 1 + li * 100 + ++stageOrder,
-          track.kind === 'vocabulary' ? '📗' : '💬',
+          track.kind === 'vocabulary'
+            ? '📗'
+            : track.kind === 'sentences'
+              ? '💬'
+              : track.kind === 'verbs'
+                ? '🔁'
+                : '🧩',
         );
 
         const inStage = track.lists.filter(

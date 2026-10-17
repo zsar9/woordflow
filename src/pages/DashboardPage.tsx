@@ -111,12 +111,13 @@ export function DashboardPage() {
     [search],
   );
 
-  // Chip-style filters only — used for the badge on the Filters toggle and
-  // to decide whether the panel should offer a "Clear" action. Search has
-  // its own always-visible clear (×) button, so it's tracked separately.
-  const activeFilterCount =
-    (selectedLanguage ? 1 : 0) + (selectedLevel ? 1 : 0) + (onlyDue ? 1 : 0);
-  const filtersActive = activeFilterCount > 0 || searchQuery !== '';
+  // Chip-style filters tucked inside the Filters panel — used for the badge
+  // on the Filters toggle. Language now has its own always-visible row (not
+  // hidden behind the toggle), so it isn't counted here; search has its own
+  // always-visible clear (×) button, so it's tracked separately too.
+  const activeFilterCount = (selectedLevel ? 1 : 0) + (onlyDue ? 1 : 0);
+  const filtersActive =
+    selectedLanguage !== null || activeFilterCount > 0 || searchQuery !== '';
 
   const visibleLists = useMemo(() => {
     let ls = baseLists;
@@ -259,32 +260,27 @@ export function DashboardPage() {
         />
       </div>
 
+      {languages.length > 1 && (
+        <div className="mb-3 flex flex-wrap items-center gap-1.5">
+          {languages.map((lang) => {
+            const accent = languageAccent(lang);
+            return (
+              <LanguageChip
+                key={lang}
+                label={lang}
+                dotColor={accent.hex}
+                active={selectedLanguage === lang}
+                onClick={() =>
+                  setSelectedLanguage((cur) => (cur === lang ? null : lang))
+                }
+              />
+            );
+          })}
+        </div>
+      )}
+
       {showFilters && (
         <div className="mb-4 space-y-3 rounded-2xl border border-border bg-surface p-3">
-          {languages.length > 1 && (
-            <div className="flex flex-wrap items-center gap-1.5">
-              <LanguageChip
-                label="All languages"
-                active={selectedLanguage === null}
-                onClick={() => setSelectedLanguage(null)}
-              />
-              {languages.map((lang) => {
-                const accent = languageAccent(lang);
-                return (
-                  <LanguageChip
-                    key={lang}
-                    label={lang}
-                    dotColor={accent.hex}
-                    active={selectedLanguage === lang}
-                    onClick={() =>
-                      setSelectedLanguage((cur) => (cur === lang ? null : lang))
-                    }
-                  />
-                );
-              })}
-            </div>
-          )}
-
           {levels.length > 1 && (
             <div className="flex flex-wrap items-center gap-1.5">
               <LanguageChip
