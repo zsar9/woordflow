@@ -376,7 +376,7 @@ function FeedbackArea({
             </div>
 
             <div
-              className="mt-1 font-serif text-2xl font-semibold"
+              className="mt-3 font-serif text-7xl font-bold leading-tight"
               style={{ color: BRIGHT_GREEN }}
               dir="auto"
             >
