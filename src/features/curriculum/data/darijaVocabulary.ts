@@ -390,7 +390,7 @@ export const DARIJA_VOCABULARY: CurriculumList[] = [
       { foreign: "3mel", native: "to do", foreignAlt: ["dar"], nativeAlt: ["to make", "did"], notes: "kay3mel - he does. In Casablanca dar / kaydir is just as common: shnu kadir = what are you doing." },
       { foreign: "gal", native: "to say", nativeAlt: ["said", "to tell"], notes: "kaygul - he says. gal liya = he told me. Pronounced with a hard g." },
       { foreign: "hder", native: "to speak", foreignAlt: ["tkellem"], nativeAlt: ["to talk", "spoke"], notes: "kayhder - he speaks. kathder darija = you speak Darija." },
-      { foreign: "fekker", native: "to think", foreignAlt: ["khemmem"], nativeAlt: ["thought", "to consider"], notes: "kayfekker - he thinks. khemmem is just as common in Casablanca." },
+      { foreign: "fkkar", native: "to think", foreignAlt: ["khemmem"], nativeAlt: ["thought", "to consider"], notes: "kayfkkar - he thinks. khemmem is just as common in Casablanca." },
       { foreign: "3ref", native: "to know", nativeAlt: ["knew"], notes: "kay3ref - he knows. ma3reftsh = I do not know." },
       { foreign: "bgha", native: "to want", nativeAlt: ["wanted", "to wish"], notes: "kaybghi - he wants. bghit = I want. bgha also means to love a person." },
       { foreign: "7taj", native: "to need", nativeAlt: ["needed"], notes: "kay7taj - he needs. Everyday phrasing is khessni = I need." },

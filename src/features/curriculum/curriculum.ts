@@ -25,6 +25,7 @@ import { DARIJA_VOCABULARY } from './data/darijaVocabulary';
 import { DARIJA_SENTENCES } from './data/darijaSentences';
 import { DARIJA_VERBS, DARIJA_CONJUGATIONS } from './data/darijaVerbs';
 import { DARIJA_VERBS_100 } from './data/darijaVerbs100';
+import { DARIJA_CONJUGATION_10 } from './data/darijaConjugation10';
 
 /** The four vocabulary stages, parameterised by language key. */
 function vocabularyStages(lang: string): CurriculumStage[] {
@@ -205,6 +206,26 @@ function conjugationStages(lang: string): CurriculumStage[] {
 }
 
 /**
+ * Present / past / future conjugation drill for the 10 most-used verbs,
+ * one stage spanning all three tense lists — Darija only.
+ */
+function conjugation10Stages(lang: string): CurriculumStage[] {
+  return [
+    {
+      key: `${lang}.conj10.stage1`,
+      title: 'Top 10 Verbs · Present, Past & Future',
+      level: 'A2',
+      blurb:
+        'The present, past and future of the 10 verbs you will reach for the ' +
+        'most — want, do, say, go, come, eat, write, know, work, drink — ' +
+        'across ana, nta, howa and 7na.',
+      from: 1,
+      to: 3,
+    },
+  ];
+}
+
+/**
  * The 100 essential basic verbs, as one dedicated stage spanning all four
  * 25-verb lists — Darija only.
  */
@@ -286,6 +307,12 @@ export const DARIJA_CURRICULUM: LanguageCurriculum = {
       category: 'verbs',
       stages: basicVerbs100Stages('darija'),
       lists: DARIJA_VERBS_100,
+    },
+    {
+      kind: 'conjugations',
+      category: 'conjugations',
+      stages: conjugation10Stages('darija'),
+      lists: DARIJA_CONJUGATION_10,
     },
   ],
 };
