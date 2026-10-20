@@ -333,7 +333,7 @@ function FeedbackArea({
           >
             <div className="text-sm font-medium text-success">Correct</div>
             <div
-              className="font-serif text-2xl font-semibold"
+              className="font-serif text-[clamp(1.75rem,9vw,4.5rem)] font-bold leading-tight whitespace-nowrap"
               style={{ color: BRIGHT_GREEN }}
               dir="auto"
             >
@@ -368,7 +368,7 @@ function FeedbackArea({
             </div>
 
             <div
-              className="font-serif text-2xl font-semibold"
+              className="font-serif text-[clamp(1.75rem,9vw,4.5rem)] font-bold leading-tight whitespace-nowrap"
               style={{ color: BRIGHT_RED }}
               dir="auto"
             >
@@ -376,7 +376,7 @@ function FeedbackArea({
             </div>
 
             <div
-              className="mt-3 font-serif text-7xl font-bold leading-tight"
+              className="mt-3 font-serif text-[clamp(1.75rem,9vw,4.5rem)] font-bold leading-tight whitespace-nowrap"
               style={{ color: BRIGHT_GREEN }}
               dir="auto"
             >

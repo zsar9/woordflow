@@ -1,8 +1,7 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useLiveQuery } from 'dexie-react-hooks';
 import { wordsOfList, statsOfList, getList } from '@/db/repo';
-import { SessionSetup } from '@/features/study/SessionSetup';
 import { StudyScreen } from '@/features/study/StudyScreen';
 import { useSettings } from '@/hooks/useSettings';
 import type { SessionConfig, Word, WordStat } from '@/types';
@@ -27,26 +26,44 @@ export function StudyPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [listId]);
 
-  // In review mode, auto-build a config that targets previously-missed words.
+  // Sessions start immediately with the standing defaults — the old setup
+  // screen (direction picker) is gone, so there is nothing left to choose.
+  // Review mode targets previously-missed words; a normal session quizzes the
+  // whole list in random order.
   useEffect(() => {
-    if (!isReviewMode || !loaded || !listId || config) return;
-    setConfig({
-      listId,
-      count: 'all',
-      direction: settings.defaultDirection,
-      order: 'only-incorrect',
-      enableHints: true,
-      enableFuzzy: true,
-      forgiveness: 'balanced',
-      askConfidence: false,
-      onlyDifficult: false,
-      onlyIncorrect: true,
-      onlyNew: false,
-      onlyBookmarked: false,
-    });
+    if (!loaded || !listId || config) return;
+    setConfig(
+      isReviewMode
+        ? {
+            listId,
+            count: 'all',
+            direction: settings.defaultDirection,
+            order: 'only-incorrect',
+            enableHints: true,
+            enableFuzzy: true,
+            forgiveness: 'balanced',
+            askConfidence: false,
+            onlyDifficult: false,
+            onlyIncorrect: true,
+            onlyNew: false,
+            onlyBookmarked: false,
+          }
+        : {
+            listId,
+            count: 'all',
+            direction: settings.defaultDirection,
+            order: 'random',
+            enableHints: true,
+            enableFuzzy: true,
+            forgiveness: 'balanced',
+            askConfidence: false,
+            onlyDifficult: false,
+            onlyIncorrect: false,
+            onlyNew: false,
+            onlyBookmarked: false,
+          },
+    );
   }, [isReviewMode, loaded, listId, config, settings]);
-
-  const eligibleCount = useMemo(() => data?.words.length ?? 0, [data]);
 
   if (!listId) {
     navigate('/');
@@ -64,15 +81,7 @@ export function StudyPage() {
   }
 
   if (!config) {
-    return (
-      <SessionSetup
-        list={data.list}
-        wordCount={eligibleCount}
-        settings={settings}
-        onStart={setConfig}
-        onCancel={() => navigate(`/list/${listId}`)}
-      />
-    );
+    return <FullscreenSpinner />;
   }
 
   return (

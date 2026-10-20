@@ -48,7 +48,11 @@ export function groupListsByFolder(
           breadcrumb: trail,
           icon: node.folder.icon,
           language: languages.size === 1 ? own[0].language : undefined,
-          lists: own.slice().sort((a, b) => a.order - b.order),
+          // Most recently created first, so anything just added (or just
+          // installed) rises to the top of its group.
+          lists: own
+            .slice()
+            .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0) || a.order - b.order),
         });
       }
       walk(node.children, [...trail, node.folder.name]);
@@ -65,9 +69,14 @@ export function groupListsByFolder(
       breadcrumb: [],
       lists: loose
         .slice()
-        .sort((a, b) => (b.lastStudiedAt ?? 0) - (a.lastStudiedAt ?? 0) || a.order - b.order),
+        .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0) || a.order - b.order),
     });
   }
 
-  return groups;
+  // Groups themselves sort by their newest list, so a freshly-added or
+  // freshly-installed set of lists rises to the top of the whole dashboard
+  // instead of staying pinned at its folder's structural position.
+  const newestOf = (g: ListGroup) =>
+    g.lists.reduce((max, l) => Math.max(max, l.createdAt ?? 0), 0);
+  return groups.slice().sort((a, b) => newestOf(b) - newestOf(a));
 }

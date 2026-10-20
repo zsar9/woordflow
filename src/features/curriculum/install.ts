@@ -20,10 +20,23 @@ import type { Folder, StudyList } from '@/types';
 import { CURRICULA } from './curriculum';
 import type { CurriculumList, LanguageCurriculum } from './types';
 
-export const CURRICULUM_VERSION = 6;
+export const CURRICULUM_VERSION = 7;
 
 const VERSION_KEY = 'woordflow.curriculum.version';
 const ROOT_KEY = 'curriculum';
+
+/**
+ * sourceKey prefixes for curriculum content that has been removed from
+ * `CURRICULA` (Spanish entirely, plus the original Darija vocabulary and
+ * sentence tracks) on 2026-10-20. Because installs are additive-only, these
+ * are swept out of the user's live library on version bump — see
+ * `cleanupRemovedContent()`.
+ */
+const REMOVED_SOURCE_KEY_PREFIXES = [
+  `${ROOT_KEY}.spanish.`,
+  `${ROOT_KEY}.darija.vocab.`,
+  `${ROOT_KEY}.darija.sent.`,
+];
 
 /** Folder order for the curriculum root: negative so it sorts above user folders. */
 const ROOT_ORDER = -1000;
@@ -73,6 +86,46 @@ export function installCurriculum(): Promise<InstallResult> {
   return inflight;
 }
 
+/**
+ * One-time sweep (run as part of the version-7 install) that deletes any
+ * already-installed lists/folders whose `sourceKey` matches content that has
+ * since been removed from `CURRICULA` — Spanish entirely, and the original
+ * Darija vocabulary/sentence tracks. Installs are additive-only, so without
+ * this the user's existing library would keep that content forever even
+ * though it no longer ships. User-made lists (no `sourceKey`, or a
+ * `sourceKey` outside these prefixes) are never touched.
+ */
+async function cleanupRemovedContent(): Promise<void> {
+  const [folders, lists] = await Promise.all([listFolders(), listLists()]);
+
+  const isRemoved = (key: string | undefined): key is string =>
+    !!key && REMOVED_SOURCE_KEY_PREFIXES.some((prefix) => key.startsWith(prefix));
+
+  const listIds = lists.filter((l) => isRemoved(l.sourceKey)).map((l) => l.id);
+  if (listIds.length === 0 && !folders.some((f) => isRemoved(f.sourceKey))) return;
+
+  await db.transaction('rw', db.lists, db.words, db.stats, db.sessions, async () => {
+    for (const id of listIds) {
+      const wordIds = await db.words.where('listId').equals(id).primaryKeys();
+      await db.stats.bulkDelete(wordIds);
+      await db.words.where('listId').equals(id).delete();
+      await db.sessions.where('listId').equals(id).delete();
+      await db.lists.delete(id);
+    }
+  });
+
+  // Folders for the removed content (e.g. the Spanish language folder, and the
+  // old Darija vocabulary/sentence stage folders) are now empty — delete them
+  // too. Folders that still contain surviving lists (sourceKey-less or
+  // otherwise) are left alone regardless of their own sourceKey.
+  const remainingLists = await listLists();
+  const folderHasSurvivingList = new Set(remainingLists.map((l) => l.folderId));
+  const folderIds = folders
+    .filter((f) => isRemoved(f.sourceKey) && !folderHasSurvivingList.has(f.id))
+    .map((f) => f.id);
+  if (folderIds.length > 0) await db.folders.bulkDelete(folderIds);
+}
+
 async function runInstall(): Promise<InstallResult> {
   const result: InstallResult = { installedLists: 0, installedEntries: 0, skipped: false };
 
@@ -80,6 +133,8 @@ async function runInstall(): Promise<InstallResult> {
     result.skipped = true;
     return result;
   }
+
+  await cleanupRemovedContent();
 
   const [folders, lists] = await Promise.all([listFolders(), listLists()]);
 

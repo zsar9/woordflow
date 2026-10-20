@@ -130,9 +130,12 @@ export function DashboardPage() {
     if (searchQuery) {
       ls = ls.filter((l) => normalize(l.name, DEFAULT_NORMALIZE).includes(searchQuery));
     }
+    // Most recently created lists first, so anything you just added (or the
+    // app just installed) surfaces at the top instead of being buried by
+    // curriculum order.
     return ls
       .slice()
-      .sort((a, b) => (b.lastStudiedAt ?? 0) - (a.lastStudiedAt ?? 0) || a.order - b.order);
+      .sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0) || a.order - b.order);
   }, [baseLists, selectedLevel, onlyDue, searchQuery, summaries]);
 
   // Lists are shown under a header per folder — with the curriculum installed a

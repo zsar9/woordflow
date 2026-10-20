@@ -5,17 +5,8 @@ import { motion } from 'framer-motion';
 import { db } from '@/db/db';
 import { Button } from '@/components/ui/Button';
 import { Icon } from '@/components/ui/Icon';
-import { Stat } from '@/components/ui/primitives';
-import { formatDuration, formatMs, gradeMeta, dutchGrade } from '@/lib/format';
-import {
-  Bar,
-  BarChart,
-  Cell,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-} from 'recharts';
-import { chartColors } from '@/features/stats/chart';
+import { formatDuration, gradeMeta } from '@/lib/format';
+import { cn } from '@/lib/cn';
 
 export function SessionReportPage() {
   const { sessionId } = useParams();
@@ -25,15 +16,6 @@ export function SessionReportPage() {
     () => (sessionId ? db.sessions.get(sessionId) : undefined),
     [sessionId],
   );
-  const recent = useLiveQuery(async () => {
-    if (!session) return [];
-    return db.sessions
-      .where('listId')
-      .equals(session.listId)
-      .and((s) => !!s.summary)
-      .reverse()
-      .sortBy('startedAt');
-  }, [session?.listId]);
 
   const mistakes = useMemo(
     () =>
@@ -62,20 +44,10 @@ export function SessionReportPage() {
   const gm = gradeMeta(s.grade);
   const totalAnswered = s.correct + s.almost + s.incorrect;
 
-  const historyData = (recent ?? [])
-    .slice()
-    .reverse()
-    .slice(-12)
-    .map((sess, i) => ({
-      name: `#${i + 1}`,
-      grade: sess.summary!.grade,
-      current: sess.id === session.id,
-    }));
-
   return (
-    <div className="min-h-screen bg-canvas px-4 py-10">
-      <div className="mx-auto max-w-2xl">
-        {/* Hero */}
+    <div className="flex min-h-screen flex-col items-center justify-center bg-canvas px-4 py-10">
+      <div className="mx-auto w-full max-w-lg text-center">
+        {/* Hero: correct count, grade and percentage — and nothing else. */}
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
@@ -83,103 +55,31 @@ export function SessionReportPage() {
           <div className="eyebrow" style={{ color: '#A9633F' }}>
             {session.isReview ? 'Review complete' : 'Session complete'} · {formatDuration(s.durationMs)}
           </div>
-          <h1 className="mt-1 text-5xl leading-tight text-ink">
-            {s.correct} of {totalAnswered},
-            <br />
-            {gm.letter === 'A' || gm.letter === 'B' ? 'first try.' : 'good work.'}
-          </h1>
-          <p className="mt-2 text-sm text-muted">
-            {session.listName} · grade {s.grade}% (Dutch {dutchGrade(s.accuracy).toFixed(1)}) · +{s.xp} XP
-          </p>
+          <div className="mt-4 font-serif text-7xl font-bold leading-tight text-ink sm:text-8xl">
+            {s.correct}
+            <span className="text-4xl font-medium text-subtle sm:text-5xl"> / {totalAnswered}</span>
+          </div>
+          <p className="mt-1 text-sm text-muted">correct</p>
+
+          <div className="mt-6 inline-flex items-center gap-3 rounded-2xl border border-border bg-surface px-6 py-3">
+            <span
+              className={cn(
+                'text-3xl font-bold',
+                gm.tone === 'success' && 'text-success',
+                gm.tone === 'warning' && 'text-warning',
+                gm.tone === 'danger' && 'text-danger',
+              )}
+            >
+              {gm.letter}
+            </span>
+            <span className="h-6 w-px bg-border" />
+            <span className="text-2xl font-semibold text-ink">{s.grade}%</span>
+          </div>
+          <p className="mt-2 text-sm text-muted">{session.listName}</p>
         </motion.div>
 
-        {/* Stats grid */}
-        <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-3">
-          <Stat label="Accuracy" value={`${s.accuracy}%`} />
-          <Stat label="Correct" value={s.correct} sub={`of ${s.correct + s.almost + s.incorrect}`} />
-          <Stat label="Almost" value={s.almost} />
-          <Stat label="Incorrect" value={s.incorrect} />
-          <Stat label="Skipped" value={s.skipped} />
-          <Stat label="Longest streak" value={s.longestStreak} />
-          <Stat label="Avg time" value={formatMs(s.avgResponseMs)} />
-          <Stat label="Fastest" value={formatMs(s.fastestMs)} />
-          <Stat label="Duration" value={formatDuration(s.durationMs)} />
-          <Stat label="Words mastered" value={s.wordsMastered} />
-          <Stat label="Need review" value={s.wordsNeedingReview} />
-          <Stat label="Mastery gained" value={`+${(s.masteryGained * 100).toFixed(0)}%`} />
-        </div>
-
-        {/* History chart */}
-        {historyData.length > 1 && (
-          <div className="mt-6 rounded-2xl border border-border bg-surface p-4">
-            <div className="mb-3 text-sm font-medium text-ink">
-              Grade vs. previous sessions
-            </div>
-            <ResponsiveContainer width="100%" height={160}>
-              <BarChart data={historyData} margin={{ top: 6, right: 0, left: 0, bottom: 0 }}>
-                <XAxis
-                  dataKey="name"
-                  tick={{ fontSize: 11, fill: chartColors.axis }}
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <Tooltip
-                  cursor={{ fill: 'rgba(127,127,127,0.08)' }}
-                  contentStyle={{
-                    background: chartColors.tooltipBg,
-                    border: `1px solid ${chartColors.grid}`,
-                    borderRadius: 12,
-                    fontSize: 12,
-                  }}
-                />
-                <Bar dataKey="grade" radius={[6, 6, 0, 0]}>
-                  {historyData.map((d, i) => (
-                    <Cell key={i} fill={d.current ? chartColors.brand : chartColors.muted} />
-                  ))}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        )}
-
-        {/* Mistakes */}
-        {mistakes.length > 0 && (
-          <div className="mt-6 rounded-2xl border border-border bg-surface p-4">
-            <div className="mb-3 flex items-center justify-between">
-              <span className="text-sm font-medium text-ink">
-                Words to review ({mistakes.length})
-              </span>
-            </div>
-            <div className="space-y-1.5">
-              {mistakes.map((m, i) => (
-                <div
-                  key={i}
-                  className="flex items-center gap-3 rounded-lg bg-canvas px-3 py-2 text-sm"
-                >
-                  <span className="min-w-0 flex-1 truncate text-ink" dir="auto">
-                    {m.prompt}
-                  </span>
-                  <span className="text-subtle">→</span>
-                  <span className="min-w-0 flex-1 truncate font-medium text-ink" dir="auto">
-                    {m.expected}
-                  </span>
-                  <span
-                    className={
-                      'shrink-0 text-xs ' +
-                      (m.outcome === 'almost' ? 'text-warning' : 'text-danger')
-                    }
-                    dir="auto"
-                  >
-                    you: {m.given || '—'}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Actions */}
-        <div className="mt-8 flex flex-col gap-2 sm:flex-row">
+        <div className="mt-10 flex flex-col gap-2 sm:flex-row">
           {mistakes.length > 0 && !session.isReview && (
             <Button
               variant="primary"
