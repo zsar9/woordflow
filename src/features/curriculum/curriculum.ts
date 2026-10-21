@@ -12,7 +12,9 @@
  *          ├─ Conjugation Drill · Present Tense
  *          ├─ 100 Basic Verbs (4 lists)
  *          ├─ Top 10 Verbs · Present, Past & Future (3 lists)
- *          └─ Beginner Essentials (10 lists: topics, connectors, more verbs)
+ *          ├─ Beginner Essentials (10 lists: topics, connectors, more verbs)
+ *          └─ Sentence Building Blocks (4 lists: question words, prepositions,
+ *             pronouns/possessives/demonstratives, negation & adverbs)
  */
 
 import type { CurriculumStage, LanguageCurriculum } from './types';
@@ -20,6 +22,7 @@ import { DARIJA_VERBS, DARIJA_CONJUGATIONS } from './data/darijaVerbs';
 import { DARIJA_VERBS_100 } from './data/darijaVerbs100';
 import { DARIJA_CONJUGATION_10 } from './data/darijaConjugation10';
 import { DARIJA_BEGINNER } from './data/darijaBeginner';
+import { DARIJA_GRAMMAR } from './data/darijaGrammar';
 
 /**
  * The verb/conjugation stages — a short, standalone pair of lists: a second
@@ -118,6 +121,28 @@ function beginnerStages(lang: string): CurriculumStage[] {
   ];
 }
 
+/**
+ * Sentence building blocks — the grammar/function words that make a sentence
+ * actually hang together, beyond the single Sentence Connectors list in
+ * Beginner Essentials: question words, prepositions & location, pronouns/
+ * possessives/demonstratives, and negation & common adverbs.
+ */
+function grammarStages(lang: string): CurriculumStage[] {
+  return [
+    {
+      key: `${lang}.grammar.stage1`,
+      title: 'Sentence Building Blocks',
+      level: 'A1',
+      blurb:
+        'The grammar words every basic sentence needs: question words, ' +
+        'prepositions, pronouns, possessives, demonstratives, negation and ' +
+        'common adverbs of time, frequency and quantity.',
+      from: 1,
+      to: 4,
+    },
+  ];
+}
+
 export const DARIJA_CURRICULUM: LanguageCurriculum = {
   key: 'darija',
   language: 'Moroccan Darija',
@@ -156,6 +181,12 @@ export const DARIJA_CURRICULUM: LanguageCurriculum = {
       category: 'vocabulary',
       stages: beginnerStages('darija'),
       lists: DARIJA_BEGINNER,
+    },
+    {
+      kind: 'vocabulary',
+      category: 'vocabulary',
+      stages: grammarStages('darija'),
+      lists: DARIJA_GRAMMAR,
     },
   ],
 };
