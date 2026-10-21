@@ -53,7 +53,7 @@ export const DARIJA_GRAMMAR: CurriculumList[] = [
       { foreign: 'mn', native: 'from', foreignAlt: ['men'], nativeAlt: ['out of', 'since'], notes: '"ja mn casa" = he came from Casablanca' },
       { foreign: 'l', native: 'to, for', foreignAlt: ['li'], nativeAlt: ['toward', 'for the benefit of'], notes: '"9olt lih" = I told him; "hada li bak" = this is for your father' },
       { foreign: 'ta7t', native: 'under', foreignAlt: ['ta7'], nativeAlt: ['below', 'beneath'], notes: '"lmfta7 ta7t lbab" = the key is under the door' },
-      { foreign: 'foug', native: 'over, above', foreignAlt: ['fog'], nativeAlt: ['on top of', 'upstairs'], notes: '"ska foug" = the apartment is upstairs/above' },
+      { foreign: 'fo9', native: 'over, above', foreignAlt: ['fou9'], nativeAlt: ['on top of', 'upstairs'], notes: '"ska fo9" = the apartment is upstairs/above' },
       { foreign: 'bin', native: 'between', foreignAlt: ['bin w bin'], nativeAlt: ['among'], notes: '"bin dar w dar" = between one house and another' },
       { foreign: '7da', native: 'next to, near', foreignAlt: ['7dak', '7di'], nativeAlt: ['beside', 'by'], notes: '"gles 7dai" = sit next to me' },
       { foreign: 'jamb', native: 'beside, next to', foreignAlt: ['jnb'], nativeAlt: ['alongside'], notes: '"parke jamb lbab" = he parked beside the door; similar to 7da but more about touching/adjacent position' },
